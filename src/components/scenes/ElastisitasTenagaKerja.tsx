@@ -218,7 +218,7 @@ export default function ElastisitasTenagaKerja() {
                   >
                     <div
                       className="text-4xl font-bold tabular-nums font-rubik"
-                      style={{ color: isResponsive ? "#10b981" : "#ec4899" }}
+                      style={{ color: isResponsive ? "#4d9221" : "#ec4899" }}
                     >
                       {value.toFixed(2)}
                     </div>
@@ -228,7 +228,7 @@ export default function ElastisitasTenagaKerja() {
                     <div
                       className={`inline-block mb-4 text-xs font-medium px-2.5 py-1 rounded-full ${
                         isResponsive
-                          ? "bg-emerald-50 text-emerald-600"
+                          ? "bg-green-50 text-green-600"
                           : "bg-pink-50 text-pink-600"
                       }`}
                     >
