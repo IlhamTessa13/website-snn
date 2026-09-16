@@ -1,26 +1,315 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  
+  --color-ivory: #fcfbf9;
+  --color-ivory-dark: #f5f3ef;
+  --color-charcoal: #1a1a1a;
+  --color-charcoal-light: #404040;
+  --color-amber: #e6f5d0;
+  --color-amber-light: #f59e0b;
+  --color-purple: #7c3aed;
+  --color-purple-light: #a78bfa;
+  --color-red: #ef4444;
+  --color-blue: #3b82f6;
+  --color-green: #10b981;
+  --color-muted: #a1a1aa;
+  --color-border: #e4e4e7;
+  --color-card: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* === GLOBAL RESET === */
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  color: var(--color-charcoal);
+  background-color: var(--color-ivory);
+  line-height: 1.7;
+}
+
+/* === EDITORIAL TYPOGRAPHY === */
+.font-editorial {
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+.heading-xl {
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+
+.heading-lg {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+.heading-md {
+  font-family: var(--font-serif);
+  font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+  line-height: 1.25;
+  font-weight: 400;
+}
+
+.heading-sm {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.body-lg {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-charcoal-light);
+}
+
+.body-sm {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+/* === NARRATIVE STEP === */
+.narrative-step {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+}
+
+.narrative-step:first-child {
+  padding-top: 4rem;
+}
+
+.narrative-step:last-child {
+  min-height: 40vh;
+}
+
+/* === CHART CONTAINERS === */
+.chart-container {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* === SECTION DIVIDER === */
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-border) 20%,
+    var(--color-border) 80%,
+    transparent 100%
+  );
+  margin: 6rem 0;
+}
+
+/* === SCROLLBAR STYLING === */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* === DATA TABLE === */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--color-charcoal);
+  text-align: left;
+}
+
+.data-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-charcoal-light);
+}
+
+.data-table tr:hover td {
+  background: var(--color-ivory-dark);
+}
+
+.data-table .highlight td {
+  background: rgba(217, 119, 6, 0.08);
+  font-weight: 600;
+  color: var(--color-charcoal);
+}
+
+/* === PILL / TAG === */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.pill-amber {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--color-amber);
+}
+
+.pill-purple {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--color-purple);
+}
+
+.pill-red {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-red);
+}
+
+.pill-green {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-green);
+}
+
+/* === TOOLTIP === */
+.chart-tooltip {
+  background: var(--color-charcoal) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2) !important;
+}
+
+.chart-tooltip .label {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.chart-tooltip .value {
+  color: rgba(255,255,255,0.8);
+  font-size: 0.75rem;
+}
+
+/* === GRADIENT TEXT === */
+.gradient-text-amber {
+  background: #e6f5d0;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-purple {
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === COUNTER / STAT BOX === */
+.stat-box {
+  padding: 1.25rem;
+  border-radius: 10px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+}
+
+.stat-value {
+  font-family: var(--font-sans);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  margin-top: 0.25rem;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .narrative-step {
+    min-height: 40vh;
+  }
+}
+
+.font-jakarta {
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.font-rubik {
+  font-family: "Rubik", sans-serif;
+}
+
+.font-bungee {
+  font-family: "Bungee Tint", cursive;
+}
+
+.font-indie{
+  font-family: "Indie Flower", cursive;
+}
+
+.font-delius{
+    font-family: "Delius", cursive;
+}
+
+.color-pink {
+  background: #c51b7d;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.color-green {
+  background: #4d9221;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

@@ -1,69 +1,153 @@
-import Image from "next/image";
+"use client";
+
+import dynamic from "next/dynamic";
+import HeroSection from "@/components/scenes/HeroSection";
+
+// Dynamic imports to avoid SSR issues with recharts
+const DisparitasPDRB = dynamic(
+  () => import("@/components/scenes/DisparitasPDRB"),
+  { ssr: false },
+);
+const LajuIndeksImplisit = dynamic(
+  () => import("@/components/scenes/LajuIndeksImplisit"),
+  { ssr: false },
+);
+const LajuPertumbuhanEkonomi = dynamic(
+  () => import("@/components/scenes/LajuPertumbuhanEkonomi"),
+  { ssr: false },
+);
+const KontribusiPDRB = dynamic(
+  () => import("@/components/scenes/KontribusiPDRB"),
+  { ssr: false },
+);
+const ShiftShareAnalysis = dynamic(
+  () => import("@/components/scenes/ShiftShareAnalysis"),
+  { ssr: false },
+);
+const IndeksWilliamson = dynamic(
+  () => import("@/components/scenes/IndeksWilliamson"),
+  { ssr: false },
+);
+const IndeksBonet = dynamic(
+  () => import("@/components/scenes/IndeksBonet"),
+  { ssr: false },
+);
+const TipologiKlassen = dynamic(
+  () => import("@/components/scenes/TipologiKlassen"),
+  { ssr: false },
+);
+const Mpc = dynamic(() => import("@/components/scenes/Mpc"), { ssr: false });
+
+const Apc = dynamic(() => import("@/components/scenes/Apc"), { ssr: false });
+
+const Elastisitas = dynamic(() => import("@/components/scenes/Elastisitas"), {
+  ssr: false,
+});
+
+const Perdagangan = dynamic(() => import("@/components/scenes/Perdagangan"), {
+  ssr: false,
+});
+const Icor = dynamic(() => import("@/components/scenes/Icor"), { ssr: false });
+const Ilor = dynamic(() => import("@/components/scenes/Ilor"), { ssr: false });
+const ElastisitasTenagaKerja = dynamic(
+  () => import("@/components/scenes/ElastisitasTenagaKerja"),
+  { ssr: false },
+);
+const TaxRatio = dynamic(() => import("@/components/scenes/TaxRatio"), {
+  ssr: false,
+});
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main>
+      {/* Hero */}
+      <HeroSection />
+
+      {/* Section Divider */}
+      <div className="section-divider" />
+
+      {/* Scene 1: Disparitas PDRB Per Kapita */}
+      <DisparitasPDRB />
+
+      <div className="section-divider" />
+
+      {/* Scene 2: Laju Indeks Implisit */}
+      <LajuIndeksImplisit />
+
+      <div className="section-divider" />
+
+      {/* Scene 3: Laju Pertumbuhan Ekonomi */}
+      <LajuPertumbuhanEkonomi />
+
+      <div className="section-divider" />
+
+      {/* Scene 4: Kontribusi PDRB */}
+      <KontribusiPDRB />
+
+      <div className="section-divider" />
+
+      {/* Scene 5: Shift-Share Analysis */}
+      <ShiftShareAnalysis />
+
+      <div className="section-divider" />
+
+      {/* Scene 6: Indeks Williamson */}
+      <IndeksWilliamson />
+
+      <IndeksBonet />
+
+      <TipologiKlassen />
+
+
+      {/* Scene 7: MPC */}
+      <Mpc />
+
+      {/* Scene 7b: APC */}
+      <Apc />
+
+      {/* Scene 7c: Elastisitas */}
+      <Elastisitas />
+
+      {/* Scene 8: Perdagangan Internasional */}
+      <Perdagangan />
+
+      {/* Scene 9: ICOR */}
+      <Icor />
+
+      {/* Scene 9b: ILOR */}
+      <Ilor />
+
+      {/* Scene 9c: Elastisitas Tenaga Kerja */}
+      <ElastisitasTenagaKerja />
+
+      {/* Scene 6b: Tax Ratio */}
+      <TaxRatio />
+
+      {/* Footer */}
+      <footer className="max-w-6xl mx-auto px-6 py-20 mt-16 border-t border-zinc-200">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+          <div>
+            <h3 className="heading-md">
+              Analisis Ekonomi
+              <span className="font-editorial gradient-text-amber">
+                {" "}
+                Jawa Tengah
+              </span>
+            </h3>
+            <p className="body-sm mt-2 max-w-md">
+              Sistem Neraca Nasional — Kelompok 2. Data bersumber dari BPS
+              Provinsi Jawa Tengah, diolah untuk keperluan akademik.
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-zinc-400">Data Periode 2016–2025</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Atas Dasar Harga Berlaku (ADHB) & Harga Konstan 2010 (ADHK)
+            </p>
+            <p className="text-xs text-zinc-300 mt-3">© 2025 SNN Kelompok 2</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </footer>
+    </main>
   );
 }

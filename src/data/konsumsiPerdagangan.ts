@@ -1,0 +1,25 @@
+export const konsumsiRTData = [
+  { tahun: 2016, yd: 849099.35, konsumsiRT: 508104.94, totalKonsumsi: 574386.15, mpc: null, apc: 0.6765, elastisitas: null },
+  { tahun: 2017, yd: 893750.30, konsumsiRT: 531583.77, totalKonsumsi: 600013.02, mpc: 0.5739, apc: 0.6713, elastisitas: 0.8549 },
+  { tahun: 2018, yd: 941091.14, konsumsiRT: 556540.86, totalKonsumsi: 627253.25, mpc: 0.5754, apc: 0.6665, elastisitas: 0.8633 },
+  { tahun: 2019, yd: 991516.54, konsumsiRT: 582253.35, totalKonsumsi: 656476.60, mpc: 0.5795, apc: 0.6621, elastisitas: 0.8753 },
+  { tahun: 2020, yd: 965227.27, konsumsiRT: 573976.75, totalKonsumsi: 645173.58, mpc: 0.4299, apc: 0.6684, elastisitas: 0.6432 },
+  { tahun: 2021, yd: 997321.13, konsumsiRT: 584447.30, totalKonsumsi: 656054.18, mpc: 0.3390, apc: 0.6578, elastisitas: 0.5154 },
+  { tahun: 2022, yd: 1050278.09, konsumsiRT: 616679.57, totalKonsumsi: 688874.19, mpc: 0.6197, apc: 0.6559, elastisitas: 0.9449 },
+  { tahun: 2023, yd: 1102437.49, konsumsiRT: 651723.53, totalKonsumsi: 726323.81, mpc: 0.7180, apc: 0.6588, elastisitas: 1.0898 },
+  { tahun: 2024, yd: 1156998.88, konsumsiRT: 685307.23, totalKonsumsi: 763693.76, mpc: 0.6849, apc: 0.6601, elastisitas: 1.0376 },
+  { tahun: 2025, yd: 1219148.60, konsumsiRT: 718064.15, totalKonsumsi: 799137.31, mpc: 0.5703, apc: 0.6555, elastisitas: 0.8700 },
+];
+
+export const perdaganganData = [
+  { tahun: 2016, ekspor: 92562.66, impor: 134238.54, netEkspor: -41675.88, totalTrade: 226801.20, rpi: -0.1838 },
+  { tahun: 2017, ekspor: 106463.04, impor: 160854.81, netEkspor: -54391.77, totalTrade: 267317.85, rpi: -0.2035 },
+  { tahun: 2018, ekspor: 123868.88, impor: 235222.13, netEkspor: -111353.25, totalTrade: 359091.01, rpi: -0.3101 },
+  { tahun: 2019, ekspor: 127703.21, impor: 203947.07, netEkspor: -76243.86, totalTrade: 331650.28, rpi: -0.2299 },
+  { tahun: 2020, ekspor: 122859.71, impor: 149426.64, netEkspor: -26566.93, totalTrade: 272286.35, rpi: -0.0976 },
+  { tahun: 2021, ekspor: 158820.64, impor: 200734.60, netEkspor: -41913.96, totalTrade: 359555.24, rpi: -0.1166 },
+  { tahun: 2022, ekspor: 182912.87, impor: 240424.08, netEkspor: -57511.21, totalTrade: 423336.95, rpi: -0.1359 },
+  { tahun: 2023, ekspor: 160378.77, impor: 233997.42, netEkspor: -73618.65, totalTrade: 394376.19, rpi: -0.1867 },
+  { tahun: 2024, ekspor: 182548.03, impor: 262420.95, netEkspor: -79872.92, totalTrade: 444968.98, rpi: -0.1795 },
+  { tahun: 2025, ekspor: 212921.00, impor: 268237.87, netEkspor: -55316.87, totalTrade: 481158.87, rpi: -0.1150 },
+];

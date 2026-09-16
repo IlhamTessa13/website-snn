@@ -1,0 +1,48 @@
+export interface ShiftShareRow {
+  kode: string;
+  lapanganUsaha: string;
+  ni: number;
+  pi: number;
+  di: number;
+  deltaYi: number;
+}
+
+export const shiftShare2021_2025: ShiftShareRow[] = [
+  { kode: "A", lapanganUsaha: "Pertanian, Kehutanan, dan Perikanan", ni: 28115.05, pi: -15604.16, di: -46.33, deltaYi: 12464.56 },
+  { kode: "B", lapanganUsaha: "Pertambangan dan Penggalian", ni: 4939.97, pi: -1495.09, di: -3455.83, deltaYi: -10.95 },
+  { kode: "C", lapanganUsaha: "Industri Pengolahan", ni: 73733.82, pi: -4781.43, di: -13165.50, deltaYi: 55786.88 },
+  { kode: "D", lapanganUsaha: "Pengadaan Listrik dan Gas", ni: 258.99, pi: -15.37, di: 34.82, deltaYi: 278.44 },
+  { kode: "E", lapanganUsaha: "Pengadaan Air, Sampah, Limbah", ni: 164.81, pi: -82.70, di: -15.12, deltaYi: 66.99 },
+  { kode: "F", lapanganUsaha: "Konstruksi", ni: 23609.09, pi: -3435.55, di: 5799.24, deltaYi: 25972.78 },
+  { kode: "G", lapanganUsaha: "Perdagangan Besar dan Eceran", ni: 32602.74, pi: -2174.20, di: -2041.55, deltaYi: 28387.01 },
+  { kode: "H", lapanganUsaha: "Transportasi dan Pergudangan", ni: 5385.11, pi: 7527.16, di: -5963.03, deltaYi: 6949.24 },
+  { kode: "I", lapanganUsaha: "Penyediaan Akomodasi dan Makan Minum", ni: 7211.74, pi: 4386.35, di: 7424.09, deltaYi: 19022.18 },
+  { kode: "J", lapanganUsaha: "Informasi dan Komunikasi", ni: 13785.06, pi: 7549.34, di: -5440.71, deltaYi: 15893.29 },
+  { kode: "K", lapanganUsaha: "Jasa Keuangan dan Asuransi", ni: 6095.41, pi: -3725.85, di: 604.22, deltaYi: 2973.78 },
+  { kode: "L", lapanganUsaha: "Real Estat", ni: 4233.31, pi: -1994.01, di: 2669.91, deltaYi: 4909.21 },
+  { kode: "M,N", lapanganUsaha: "Jasa Perusahaan", ni: 844.63, pi: 220.89, di: 232.53, deltaYi: 1298.05 },
+  { kode: "O", lapanganUsaha: "Administrasi Pemerintahan", ni: 5428.10, pi: -3755.53, di: 2324.31, deltaYi: 3996.88 },
+  { kode: "P", lapanganUsaha: "Jasa Pendidikan", ni: 8622.65, pi: -6044.75, di: -1060.93, deltaYi: 9516.97 },
+  { kode: "Q", lapanganUsaha: "Jasa Kesehatan dan Kegiatan Sosial", ni: 2096.05, pi: 207.64, di: -201.49, deltaYi: 2102.20 },
+  { kode: "R,S,T,U", lapanganUsaha: "Jasa Lainnya", ni: 3555.15, pi: 2410.23, di: 254.58, deltaYi: 6219.96 },
+];
+
+export const shiftShare2016_2020: ShiftShareRow[] = [
+  { kode: "A", lapanganUsaha: "Pertanian, Kehutanan, dan Perikanan", ni: 15886.12, pi: 199.43, di: -6304.90, deltaYi: 9780.64 },
+  { kode: "B", lapanganUsaha: "Pertambangan dan Penggalian", ni: 2644.83, pi: -2247.72, di: 1620.56, deltaYi: 2017.67 },
+  { kode: "C", lapanganUsaha: "Industri Pengolahan", ni: 40416.26, pi: -12088.66, di: 1329.23, deltaYi: 29656.83 },
+  { kode: "D", lapanganUsaha: "Pengadaan Listrik dan Gas", ni: 126.74, pi: -44.92, di: 94.80, deltaYi: 176.62 },
+  { kode: "E", lapanganUsaha: "Pengadaan Air, Sampah, Limbah", ni: 80.54, pi: 59.65, di: -26.78, deltaYi: 113.41 },
+  { kode: "F", lapanganUsaha: "Konstruksi", ni: 11824.55, pi: 1963.05, di: -995.89, deltaYi: 12791.71 },
+  { kode: "G", lapanganUsaha: "Perdagangan Besar dan Eceran", ni: 16651.01, pi: -1186.82, di: 1797.05, deltaYi: 17262.24 },
+  { kode: "H", lapanganUsaha: "Transportasi dan Pergudangan", ni: 3835.25, pi: -2020.46, di: -6347.23, deltaYi: -4532.44 },
+  { kode: "I", lapanganUsaha: "Penyediaan Akomodasi dan Makan Minum", ni: 3636.08, pi: -313.04, di: 817.23, deltaYi: 4140.27 },
+  { kode: "J", lapanganUsaha: "Informasi dan Komunikasi", ni: 4879.85, pi: 9236.26, di: 8880.54, deltaYi: 22996.65 },
+  { kode: "K", lapanganUsaha: "Jasa Keuangan dan Asuransi", ni: 3213.36, pi: 2455.26, di: -2095.88, deltaYi: 3572.74 },
+  { kode: "L", lapanganUsaha: "Real Estat", ni: 2161.03, pi: 313.75, di: 424.09, deltaYi: 2898.87 },
+  { kode: "M,N", lapanganUsaha: "Jasa Perusahaan", ni: 413.89, pi: 291.24, di: -34.54, deltaYi: 670.59 },
+  { kode: "O", lapanganUsaha: "Administrasi Pemerintahan", ni: 3102.35, pi: -143.96, di: -991.76, deltaYi: 1966.63 },
+  { kode: "P", lapanganUsaha: "Jasa Pendidikan", ni: 4297.36, pi: 1471.88, di: 1699.36, deltaYi: 7468.60 },
+  { kode: "Q", lapanganUsaha: "Jasa Kesehatan dan Kegiatan Sosial", ni: 946.14, pi: 1236.82, di: 341.99, deltaYi: 2524.96 },
+  { kode: "R,S,T,U", lapanganUsaha: "Jasa Lainnya", ni: 1823.44, pi: 748.40, di: 50.07, deltaYi: 2621.91 },
+];
