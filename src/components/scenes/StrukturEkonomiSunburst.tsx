@@ -109,7 +109,7 @@ const getStyle = (node: d3.HierarchyNode<HierarchyData>) => {
   if (activeStep === 5 && isSekunder) {
     if (node.data.code === "F") {
       strokeWidth = 3;
-      strokeColor = "#065F46";
+      strokeColor = "#e9a3c9";
     } // highlight konstruksi
   } else if (activeStep === 5 && !isSekunder) {
     isDimmed = true;

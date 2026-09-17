@@ -121,7 +121,7 @@ export const getHierarchicalData = (year: number): HierarchyData =>  {
       },
       {
         name: "Tersier",
-        color: "#0891B2",
+        color: "#c51b7d",
         children: dataLapanganUsaha
           .filter((d) => !["A", "B", "C", "D", "E", "F"].includes(d.code))
           .map((d) => ({ ...d, value: d.values[year] })),
