@@ -28,6 +28,11 @@ const SumberPertumbuhanPDRB = dynamic(
   { ssr: false },
 );
 
+const LajuIndeksImplisit = dynamic(
+  () => import("@/components/scenes/LajuIndeksImplisit"),
+  { ssr: false },
+);
+
 
 const IndeksWilliamson = dynamic(() => import("@/components/scenes/IndeksWilliamson"), { ssr: false });
 
@@ -37,10 +42,12 @@ const TipologiKlassen = dynamic(() => import("@/components/scenes/TipologiKlasse
 
 const SsSederhana = dynamic(() => import("@/components/scenes/SsSederhana"), { ssr: false });
 
-const Lq= dynamic(
-  () => import("@/components/scenes/Lq"),
+const ShiftShareMatrix= dynamic(
+  () => import("@/components/scenes/ShiftShareMatrix"),
   { ssr: false },
 );
+
+const Lq = dynamic(() => import("@/components/scenes/Lq"), { ssr: false });
 
 const Mpc = dynamic(() => import("@/components/scenes/Mpc"), { ssr: false });
 
@@ -84,6 +91,8 @@ export default function Home() {
       {/* Section 4: Sumber Pertumbuhan PDRB */}
       <SumberPertumbuhanPDRB />
 
+      <LajuIndeksImplisit />
+
       {/* Scene 6: Indeks Williamson */}
 
       <IndeksWilliamson />
@@ -99,6 +108,8 @@ export default function Home() {
 
       {/* Scene 6e: LQ */}
       <Lq />
+
+      <ShiftShareMatrix />
 
       {/* Scene 7: MPC */}
       <Mpc />

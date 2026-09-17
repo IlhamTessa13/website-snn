@@ -101,7 +101,7 @@ const getStyle = (node: d3.HierarchyNode<HierarchyData>) => {
   if (activeStep === 4) {
     if (node.data.code === "J" || node.data.code === "H") {
       strokeWidth = 3;
-      strokeColor = "#0E7490";
+      strokeColor = "#e9a3c9";
     } else if (!isTersier) {
       isDimmed = true;
     }
@@ -132,7 +132,7 @@ const getStyle = (node: d3.HierarchyNode<HierarchyData>) => {
       Tersier: d3
         .scaleLinear<string>()
         .domain([0, 10])
-        .range(["#0891B2", "#67e8f9"]),
+        .range(["#c51b7d", "#e9a3c9"]),
     };
   }, []);
 

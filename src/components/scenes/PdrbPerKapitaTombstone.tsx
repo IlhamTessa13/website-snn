@@ -11,16 +11,29 @@ const DOMAIN_MAX = 170_000; // dipakai sama untuk kedua sisi agar panjangnya seb
 const TICKS = [0, 50_000, 100_000, 150_000];
 const CENTER_W = 148; // lebar kolom label nama di sumbu 0 (px)
 const MARQUEE_SPEED = 50; // px / detik
+const ROW_H = 44; // tinggi baris tetap & nyaman (px) — bukan lagi hasil bagi tinggi kontainer/35 baris
+const PLOT_HEIGHT = 480; // tinggi kotak chart yang terlihat; sisanya di-scroll internal
+
+/**
+ * Palet diverging PiYG — SATU-SATUNYA sumber warna aksen di scene ini.
+ * ADHB = keluarga hijau, ADHK = keluarga pink/magenta.
+ */
+const GREEN_DARK = "#4d9221";
+const GREEN_MID = "#a1d76a";
+const GREEN_LIGHT = "#e6f5d0";
+const PINK_LIGHT = "#fde0ef";
+const PINK_MID = "#e9a3c9";
+const PINK_DARK = "#c51b7d";
 
 const ADHB = {
-  solid: "#F97316",
-  dark: "#9A3412",
-  gradient: "linear-gradient(to left, #EA580C, #FDBA74)",
+  solid: GREEN_MID,
+  dark: GREEN_DARK,
+  gradient: `linear-gradient(to left, ${GREEN_DARK}, ${GREEN_LIGHT})`,
 };
 const ADHK = {
-  solid: "#7C3AED",
-  dark: "#4C1D95",
-  gradient: "linear-gradient(to right, #6D28D9, #C4B5FD)",
+  solid: PINK_MID,
+  dark: PINK_DARK,
+  gradient: `linear-gradient(to right, ${PINK_DARK}, ${PINK_LIGHT})`,
 };
 
 type Side = "adhb" | "adhk";
@@ -50,8 +63,7 @@ const rows = (() => {
 const meanAdhb = rows.reduce((s, r) => s + r.adhb, 0) / rows.length;
 const meanAdhk = rows.reduce((s, r) => s + r.adhk, 0) / rows.length;
 
-const rupiah = (v: number) =>
-  "Rp" + Math.round(v).toLocaleString("id-ID");
+const rupiah = (v: number) => "Rp" + Math.round(v).toLocaleString("id-ID");
 
 const ratioText = (v: number, mean: number) => {
   const r = v / mean;
@@ -66,11 +78,13 @@ const TOP5 = rows.slice(0, 5).map((r) => r.key);
 
 type Tone = "orange" | "purple" | "magenta" | "red";
 
+// Semua tone dipetakan ke palet PiYG: "orange" (isu ADHB) → hijau,
+// "purple/magenta/red" (isu ADHK & kesenjangan) → pink/magenta.
 const TONE: Record<Tone, { bg: string; fg: string }> = {
-  orange: { bg: "#FFEDD5", fg: "#C2410C" },
-  purple: { bg: "#EDE9FE", fg: "#5B21B6" },
-  magenta: { bg: "#FCE7F3", fg: "#9D174D" },
-  red: { bg: "#FEE2E2", fg: "#B91C1C" },
+  orange: { bg: GREEN_LIGHT, fg: GREEN_DARK },
+  purple: { bg: PINK_LIGHT, fg: PINK_DARK },
+  magenta: { bg: PINK_LIGHT, fg: PINK_DARK },
+  red: { bg: PINK_LIGHT, fg: PINK_DARK },
 };
 
 function HL({ tone, children }: { tone: Tone; children: React.ReactNode }) {
@@ -160,11 +174,10 @@ const STEPS: StepCfg[] = [
     side: "adhb",
     body: (
       <>
-        Kudus menempati posisi kedua dengan{" "}
-        <HL tone="orange">Rp148.384</HL> per kapita — didorong basis industri
-        rokok dan manufaktur yang sangat padat, terkonsentrasi di wilayah yang
-        relatif kecil, sehingga nilai tambah ekonominya terbagi ke penduduk yang
-        tidak terlalu banyak.
+        Kudus menempati posisi kedua dengan <HL tone="orange">Rp148.384</HL> per
+        kapita — didorong basis industri rokok dan manufaktur yang sangat padat,
+        terkonsentrasi di wilayah yang relatif kecil, sehingga nilai tambah
+        ekonominya terbagi ke penduduk yang tidak terlalu banyak.
       </>
     ),
   },
@@ -225,7 +238,6 @@ export default function PdrbPerKapitaTombstone() {
   );
   const [seqTick, setSeqTick] = useState(0);
   const [sideWidth, setSideWidth] = useState(300);
-  const [rowH, setRowH] = useState(18);
 
   const stepsRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<HTMLDivElement>(null);
@@ -249,20 +261,32 @@ export default function PdrbPerKapitaTombstone() {
     return () => obs.disconnect();
   }, []);
 
-  /* ---------- ukur lebar satu sisi & tinggi baris ---------- */
+  /* ---------- ukur lebar satu sisi (tinggi baris sudah tetap/ROW_H) ---------- */
   useEffect(() => {
     const el = plotRef.current;
     if (!el) return;
     const measure = () => {
       const w = el.clientWidth;
       setSideWidth(Math.max(80, (w - CENTER_W) / 2));
-      setRowH(Math.max(11, el.clientHeight / rows.length));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  /* ---------- auto-scroll internal: bawa baris terkunci ke tengah kotak ---------- */
+  useEffect(() => {
+    const lockKey = STEPS[Math.max(0, activeStep)]?.lock;
+    const container = plotRef.current;
+    if (!lockKey || !container) return;
+    const target = container.querySelector<HTMLElement>(
+      `[data-row="${lockKey}"]`,
+    );
+    if (!target) return;
+    const targetTop = target.offsetTop - container.clientHeight / 2 + ROW_H / 2;
+    container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+  }, [activeStep]);
 
   /* ---------- sequence step 5 ---------- */
   const step = STEPS[Math.max(0, activeStep)];
@@ -305,7 +329,7 @@ export default function PdrbPerKapitaTombstone() {
     const widthPct = pct(value);
     const barPx = (widthPct / 100) * sideWidth;
 
-    const fontSize = Math.max(8, Math.min(rowH * 0.78, 15));
+    const fontSize = Math.max(8, Math.min(ROW_H * 0.78, 15));
     const unit = row.label.length * fontSize * 0.5 + fontSize * 1.6;
     const repeats = Math.max(3, Math.ceil((barPx * 1.2) / unit));
     const duration = Math.max(3, (repeats * unit) / MARQUEE_SPEED);
@@ -400,9 +424,7 @@ export default function PdrbPerKapitaTombstone() {
             whiteSpace: "nowrap",
           }}
         >
-          <span
-            style={{ fontSize: 12.5, fontWeight: 700, color: theme.dark }}
-          >
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: theme.dark }}>
             {rupiah(value)}
           </span>
           <span style={{ fontSize: 11.5, color: "#6B7280" }}>
@@ -434,6 +456,10 @@ export default function PdrbPerKapitaTombstone() {
         @media (prefers-reduced-motion: reduce) {
           .tsb-marquee-l, .tsb-marquee-r { animation: none !important; }
         }
+        .tsb-plot::-webkit-scrollbar { width: 8px; }
+        .tsb-plot::-webkit-scrollbar-track { background: transparent; }
+        .tsb-plot::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+        .tsb-plot::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
       `}</style>
 
       <div
@@ -449,20 +475,11 @@ export default function PdrbPerKapitaTombstone() {
       >
         {/* ============ KIRI — CHART (STICKY) ============ */}
         <div
-          style={{ position: "sticky", top: 0 }}
-          className="w-full lg:w-[60%] h-auto lg:h-screen flex flex-col justify-center py-8"
+          style={{ position: "sticky", top: 24 }}
+          className="w-full lg:w-[60%] py-8"
         >
-          <h2
-            style={{
-              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
-              fontWeight: 700,
-              color: "#1F2937",
-              fontSize: "clamp(19px, 2.1vw, 27px)",
-              lineHeight: 1.25,
-              margin: 0,
-            }}
-          >
-            PDRB Per Kapita: Seberapa Jauh Kesenjangan Antarwilayah?
+          <h2 className="font-bungee color-pink">
+            PDRB Per Kapita: <p className="font-bungee color-green">Seberapa Jauh Kesenjangan Antarwilayah?</p>
           </h2>
 
           {/* Header sumbu */}
@@ -526,144 +543,148 @@ export default function PdrbPerKapitaTombstone() {
             </div>
           </div>
 
-          {/* Plot */}
+          {/* Plot — kotak tinggi tetap, scroll internal (bukan lagi dipaksa muat 35 baris) */}
           <div
             ref={plotRef}
             style={{
               position: "relative",
               marginTop: 4,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
+              height: PLOT_HEIGHT,
+              overflowY: "auto",
+              border: "1px solid #E5E7EB",
+              borderRadius: 14,
+              background: "#FFFFFF",
             }}
-            className="h-[700px] lg:h-[calc(100vh-190px)]"
+            className="tsb-plot"
           >
-            {/* Garis panduan vertikal */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                pointerEvents: "none",
-              }}
-            >
-              <div style={{ flex: 1, position: "relative" }}>
-                {TICKS.map((t) => (
-                  <span
-                    key={t}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      bottom: 0,
-                      right: `${pct(t)}%`,
-                      borderLeft: "1px dashed #E5E7EB",
-                    }}
-                  />
-                ))}
-              </div>
-              <div style={{ width: CENTER_W }} />
-              <div style={{ flex: 1, position: "relative" }}>
-                {TICKS.map((t) => (
-                  <span
-                    key={t}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      bottom: 0,
-                      left: `${pct(t)}%`,
-                      borderLeft: "1px dashed #E5E7EB",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Baris */}
-            {rows.map((row, idx) => {
-              const isActive = active?.key === row.key;
-              const dimmed = active !== null && !isActive;
-              const isPaused = hovered?.key === row.key;
-
-              return (
-                <div
-                  key={row.key}
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    flex: "1 1 0",
-                    minHeight: 12,
-                    maxHeight: 24,
-                    opacity: !started ? 0 : dimmed ? 0.17 : 1,
-                    transform: started ? "none" : "translateY(6px)",
-                    transition: `opacity 300ms ease ${
-                      started && activeStep === 0 ? idx * 22 : 0
-                    }ms, transform 300ms ease ${
-                      started && activeStep === 0 ? idx * 22 : 0
-                    }ms`,
-                    zIndex: isActive ? 4 : 1,
-                  }}
-                >
-                  {/* sisi ADHB */}
-                  <div
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      alignItems: "center",
-                      position: "relative",
-                      height: "84%",
-                    }}
-                  >
-                    {isActive &&
-                      active!.side === "adhb" &&
-                      renderAnnotation(row, "adhb")}
-                    {renderBar(row, "adhb", isActive, isPaused)}
-                  </div>
-
-                  {/* label tengah */}
-                  <div
-                    style={{
-                      width: CENTER_W,
-                      textAlign: "center",
-                      fontSize: Math.max(8, Math.min(rowH * 0.62, 11.5)),
-                      letterSpacing: "0.04em",
-                      color: isActive ? "#1F2937" : "#6B7280",
-                      fontWeight: isActive ? 700 : 500,
-                      textTransform: "uppercase",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      padding: "0 6px",
-                    }}
-                  >
-                    {row.label}
-                  </div>
-
-                  {/* sisi ADHK */}
-                  <div
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      justifyContent: "flex-start",
-                      alignItems: "center",
-                      position: "relative",
-                      height: "84%",
-                    }}
-                  >
-                    {renderBar(row, "adhk", isActive, isPaused)}
-                    {isActive &&
-                      active!.side === "adhk" &&
-                      renderAnnotation(row, "adhk")}
-                  </div>
+            {/* Wrapper konten — tingginya = 35 baris × ROW_H, ini yang men-scroll */}
+            <div style={{ position: "relative", height: rows.length * ROW_H }}>
+              {/* Garis panduan vertikal (ikut scroll bersama baris) */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  pointerEvents: "none",
+                }}
+              >
+                <div style={{ flex: 1, position: "relative" }}>
+                  {TICKS.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        right: `${pct(t)}%`,
+                        borderLeft: "1px dashed #E5E7EB",
+                      }}
+                    />
+                  ))}
                 </div>
-              );
-            })}
+                <div style={{ width: CENTER_W }} />
+                <div style={{ flex: 1, position: "relative" }}>
+                  {TICKS.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        left: `${pct(t)}%`,
+                        borderLeft: "1px dashed #E5E7EB",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Baris — tinggi tetap & nyaman (ROW_H), bukan hasil bagi tinggi kontainer */}
+              {rows.map((row, idx) => {
+                const isActive = active?.key === row.key;
+                const dimmed = active !== null && !isActive;
+                const isPaused = hovered?.key === row.key;
+
+                return (
+                  <div
+                    key={row.key}
+                    data-row={row.key}
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      height: ROW_H,
+                      opacity: !started ? 0 : dimmed ? 0.17 : 1,
+                      transform: started ? "none" : "translateY(6px)",
+                      transition: `opacity 300ms ease ${
+                        started && activeStep === 0 ? idx * 22 : 0
+                      }ms, transform 300ms ease ${
+                        started && activeStep === 0 ? idx * 22 : 0
+                      }ms`,
+                      zIndex: isActive ? 4 : 1,
+                    }}
+                  >
+                    {/* sisi ADHB */}
+                    <div
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        alignItems: "center",
+                        position: "relative",
+                        height: "84%",
+                      }}
+                    >
+                      {isActive &&
+                        active!.side === "adhb" &&
+                        renderAnnotation(row, "adhb")}
+                      {renderBar(row, "adhb", isActive, isPaused)}
+                    </div>
+
+                    {/* label tengah */}
+                    <div
+                      style={{
+                        width: CENTER_W,
+                        textAlign: "center",
+                        fontSize: Math.max(8, Math.min(ROW_H * 0.62, 11.5)),
+                        letterSpacing: "0.04em",
+                        color: isActive ? "#1F2937" : "#6B7280",
+                        fontWeight: isActive ? 700 : 500,
+                        textTransform: "uppercase",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        padding: "0 6px",
+                      }}
+                    >
+                      {row.label}
+                    </div>
+
+                    {/* sisi ADHK */}
+                    <div
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "flex-start",
+                        alignItems: "center",
+                        position: "relative",
+                        height: "84%",
+                      }}
+                    >
+                      {renderBar(row, "adhk", isActive, isPaused)}
+                      {isActive &&
+                        active!.side === "adhk" &&
+                        renderAnnotation(row, "adhk")}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>
-            Arahkan kursor ke salah satu bar untuk melihat nilai persisnya
-            · rata-rata 35 kab/kota: {rupiah(meanAdhb)} (ADHB) ·{" "}
+            Arahkan kursor ke salah satu bar untuk melihat nilai persisnya ·
+            rata-rata 35 kab/kota: {rupiah(meanAdhb)} (ADHB) ·{" "}
             {rupiah(meanAdhk)} (ADHK)
           </p>
         </div>
