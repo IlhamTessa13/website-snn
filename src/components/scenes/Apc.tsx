@@ -187,15 +187,7 @@ export default function Apc() {
                               : "text-zinc-400"
                         }`}
                       >
-                        {delta > 0 ? (
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                        ) : delta < 0 ? (
-                          <ArrowDownRight className="w-3.5 h-3.5" />
-                        ) : (
-                          <Minus className="w-3.5 h-3.5" />
-                        )}
-                        {delta > 0 ? "+" : ""}
-                        {delta.toFixed(2)} pp vs {previous!.tahun}
+
                       </div>
                     )}
                   </motion.div>
