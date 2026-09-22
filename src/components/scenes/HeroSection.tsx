@@ -4,15 +4,15 @@ import { motion } from "framer-motion";
 
 export default function HeroSection() {
   return (
-    <section
-      className="relative min-h-screen flex flex-col justify-center items-center px-6 overflow-hidden bg-[#f4f1ea]"
-      style={{
-        backgroundImage: "url('/background.webp')",
-        backgroundSize: "contain",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
+      <section
+        className="relative h-screen flex flex-col justify-center items-center px-6 overflow-hidden bg-[#f4f1ea]"
+        style={{
+          backgroundImage: "url('/background.webp')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
       {/* Top label */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
