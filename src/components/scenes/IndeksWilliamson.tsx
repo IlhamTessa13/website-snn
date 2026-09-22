@@ -40,9 +40,8 @@ const steps: { id: number; content: ReactNode }[] = [
         PDRB Jawa Tengah mencatatkan tren pertumbuhan, namun distribusi nilai
         tambah antardaerah menunjukkan dinamika yang berbeda. Melalui{" "}
         <strong>Indeks Williamson</strong>, kita dapat melihat seberapa merata
-        distribusi ekonomi di antara 35 kabupaten dan kota. Nilai di atas{" "}
-        <strong>0,50</strong> menandakan derajat ketimpangan spasial yang
-        tergolong tinggi.
+        tingkat pembangunan di antara 35 kabupaten dan kota. Nilai di atas{" "}
+        <strong>0,50</strong> menandakan ketimpangan yang tergolong tinggi.
       </p>
     ),
   },
@@ -58,9 +57,8 @@ const steps: { id: number; content: ReactNode }[] = [
         </p>
         <p>
           Meskipun kurva menunjukkan tren penurunan, seluruh lintasan tetap
-          berada jauh di atas ambang batas 0,50. Hal ini mengindikasikan bahwa
-          konsentrasi aktivitas ekonomi bernilai tambah tinggi masih terkunci di
-          beberapa pusat pertumbuhan perkotaan dan industri.
+          berada di atas ambang batas 0,50. Artinya, di Provinsi Jawa Tengah
+          ketidakmerataan pembangunan masih tergolong tinggi.
         </p>
       </>
     ),
@@ -70,8 +68,7 @@ const steps: { id: number; content: ReactNode }[] = [
     content: (
       <>
         <p>
-          Pada 2020, ekonomi Jawa Tengah mengalami kontraksi sebesar 2,65%,
-          sementara Indeks Williamson naik menjadi{" "}
+          Pada 2020, Indeks Williamson naik menjadi{" "}
           <span className="hl hl-red-krisis">0,692</span>.
         </p>
         <p>
@@ -95,8 +92,7 @@ const steps: { id: number; content: ReactNode }[] = [
       <>
         <p>
           Setelah pandemi, Indeks Williamson menurun hingga{" "}
-          <span className="hl hl-orange-end">0,677 pada 2025</span>. Namun,
-          selisih PDRB per kapita antarwilayah justru meningkat.
+          <span className="hl hl-orange-end">0,677 pada 2025</span>.
         </p>
         <p>
           <span className="hl hl-green-peak">Kota Semarang: Rp167,24 juta</span>

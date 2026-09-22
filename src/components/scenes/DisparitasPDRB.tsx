@@ -13,18 +13,21 @@ export default function DisparitasPDRB() {
   const maxAdhb = Math.max(...sortedByAdhb.map((d) => d.pdrbAdhb));
   const maxAdhk = Math.max(...sortedByAdhb.map((d) => d.pdrbAdhk));
 
-  const handleIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
-    let best = -1;
-    let bestRatio = 0;
-    entries.forEach((entry) => {
-      const idx = parseInt((entry.target as HTMLElement).dataset.step || "0");
-      if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
-        bestRatio = entry.intersectionRatio;
-        best = idx;
-      }
-    });
-    if (best >= 0) setActiveGroup(best);
-  }, []);
+  const handleIntersection = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      let best = -1;
+      let bestRatio = 0;
+      entries.forEach((entry) => {
+        const idx = parseInt((entry.target as HTMLElement).dataset.step || "0");
+        if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
+          bestRatio = entry.intersectionRatio;
+          best = idx;
+        }
+      });
+      if (best >= 0) setActiveGroup(best);
+    },
+    [],
+  );
 
   useEffect(() => {
     const container = sectionRef.current;
@@ -48,7 +51,8 @@ export default function DisparitasPDRB() {
         </h2>
         <p className="body-lg mt-3 max-w-2xl">
           Perbandingan PDRB per kapita Atas Dasar Harga Berlaku (ADHB) dan Atas
-          Dasar Harga Konstan 2010 (ADHK) untuk 35 kabupaten/kota di Jawa Tengah.
+          Dasar Harga Konstan 2010 (ADHK) untuk 35 kabupaten/kota di Jawa
+          Tengah.
         </p>
       </div>
 
@@ -60,11 +64,15 @@ export default function DisparitasPDRB() {
             <div className="flex items-center gap-6 mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-sm bg-amber-500" />
-                <span className="text-xs font-medium text-zinc-500">ADHB (ribu Rp)</span>
+                <span className="text-xs font-medium text-zinc-500">
+                  ADHB (ribu Rp)
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-sm bg-purple-500" />
-                <span className="text-xs font-medium text-zinc-500">ADHK 2010 (ribu Rp)</span>
+                <span className="text-xs font-medium text-zinc-500">
+                  ADHK 2010 (ribu Rp)
+                </span>
               </div>
             </div>
 
@@ -79,7 +87,10 @@ export default function DisparitasPDRB() {
                   <div
                     key={item.name}
                     className="flex items-center gap-0 transition-opacity duration-500"
-                    style={{ opacity: activeRegions.length === 0 ? 1 : isActive ? 1 : 0.15 }}
+                    style={{
+                      opacity:
+                        activeRegions.length === 0 ? 1 : isActive ? 1 : 0.15,
+                    }}
                   >
                     {/* ADHB bar (left, grows right-to-left) */}
                     <div className="flex-1 flex justify-end">
@@ -136,11 +147,7 @@ export default function DisparitasPDRB() {
         {/* Right: Scrollable Narrative */}
         <div className="lg:w-[42%] pb-24">
           {narrativeGroups.map((group, idx) => (
-            <div
-              key={idx}
-              data-step={idx}
-              className="narrative-step"
-            >
+            <div key={idx} data-step={idx} className="narrative-step">
               <div
                 className="p-6 rounded-xl border transition-all duration-500"
                 style={{

@@ -2,86 +2,63 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as d3 from "d3";
-import * as topojson from "topojson-client";
-import type { Feature, Geometry } from "geojson";
 import {
-  bonetMap,
-  idToNameMap,
-  getBonetColor,
-  bonetLegendSwatches,
-  BONET_START_YEAR,
-  BONET_END_YEAR,
-  type BonetEntry,
-} from "@/data/bonet";
-
-const WIDTH = 800;
-const HEIGHT = 480;
-
-type Kab = Feature<Geometry>;
-
-function regionOf(f: Kab): BonetEntry | undefined {
-  const name = idToNameMap[String(f.id)];
-  return name ? bonetMap.get(name.toLowerCase().trim()) : undefined;
-}
+  williamsonData,
+  williamsonCallouts,
+  type WilliamsonPoint,
+} from "@/data/williamson";
 
 /* ============================================================
-   Konfigurasi per step — menggantikan rantai if/else imperatif
+   Geometri chart — viewBox tetap, SVG di-scale oleh browser.
+   Nilai dx/dy callout di data/williamson.ts mengacu ke koordinat ini.
    ============================================================ */
-type FillMode = "base" | "year";
+const WIDTH = 760;
+const HEIGHT = 480;
+const MARGIN = { top: 25, right: 35, bottom: 35, left: 50 };
+const INNER_W = WIDTH - MARGIN.left - MARGIN.right;
+const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom;
 
-interface StepConfig {
-  badge: string;
-  /** Tahun yang dipaksa saat step aktif; undefined = biarkan pilihan user */
-  year?: number;
-  /** Sumber warna; undefined = pertahankan mode sebelumnya */
-  fill?: FillMode;
-  /** Wilayah yang di-highlight; sisanya diredupkan */
-  focusIds?: string[];
-  focusClass?: "highlight-top" | "highlight-low";
-}
+const Y_TICKS = [0.6, 0.62, 0.64, 0.66, 0.68, 0.7];
 
-const stepConfig: Record<number, StepConfig> = {
-  1: { badge: "Basis 2016–2019", year: 2019, fill: "base" },
-  2: {
-    badge: "Kutub: IB Tertinggi",
-    focusIds: ["33-19", "33-74", "33-72"],
-    focusClass: "highlight-top",
-  },
-  3: {
-    badge: "Stagnansi: Pemalang & Grobogan",
-    focusIds: ["33-27", "33-15"],
-    focusClass: "highlight-low",
-  },
-  4: {
-    badge: "Pascapandemi (2025)",
-    year: 2025,
-    fill: "year",
-    focusIds: ["33-01", "33-74"],
-    focusClass: "highlight-top",
-  },
-  5: { badge: "Eksplorasi Bebas (2025)", year: 2025, fill: "year" },
-};
+const xScale = d3.scaleLinear().domain([2015, 2026]).range([0, INNER_W]);
+const yScale = d3.scaleLinear().domain([0.6, 0.7]).range([INNER_H, 0]);
 
+const lineGenerator = d3
+  .line<WilliamsonPoint>()
+  .x((d) => xScale(d.year))
+  .y((d) => yScale(d.iw))
+  .curve(d3.curveStep);
+
+/* ============================================================
+   Narasi
+   ============================================================ */
 const steps: { id: number; content: ReactNode }[] = [
+  {
+    id: 0,
+    content: (
+      <p>
+        PDRB Jawa Tengah mencatatkan tren pertumbuhan, namun distribusi nilai
+        tambah antardaerah menunjukkan dinamika yang berbeda. Melalui{" "}
+        <strong>Indeks Williamson</strong>, kita dapat melihat seberapa merata
+        tingkat pembangunan di antara 35 kabupaten dan kota. Nilai di atas{" "}
+        <strong>0,50</strong> menandakan ketimpangan yang tergolong tinggi.
+      </p>
+    ),
+  },
   {
     id: 1,
     content: (
       <>
-        <h3 className="bonet-card-title">
-          Ketimpangan Antarwilayah di Jawa Tengah
-        </h3>
-        <p className="bonet-card-text">
-          <strong>Indeks Bonet</strong> mengukur deviasi absolut PDRB per kapita
-          kabupaten/kota terhadap rata-rata provinsi. Nilai mendekati nol
-          mencerminkan kapasitas output yang setara dengan rata-rata Jawa
-          Tengah.
+        <p>
+          Sebelum pandemi, angka Indeks Williamson bergerak melandai secara
+          bertahap dari <strong>0,654</strong> pada 2016 menjadi{" "}
+          <strong>0,645</strong> pada 2019. Penurunan tipis menunjukkan adanya
+          perbaikan pemerataan yang relatif lambat.
         </p>
-        <p className="bonet-card-text">
-          Pada periode sebelum pandemi (2016–2019), mayoritas kabupaten
-          mencatatkan deviasi moderat di bawah 0,50, sementara segelintir pusat
-          industri dan perkotaan melesat jauh melampaui tolok ukur provinsi. Hal
-          ini membuktikan bahwa distribusi nilai tambah regional masih bertumpu
-          secara timpang pada aglomerasi tertentu.
+        <p>
+          Meskipun kurva menunjukkan tren penurunan, seluruh lintasan tetap
+          berada di atas ambang batas 0,50. Artinya, di Provinsi Jawa Tengah
+          ketidakmerataan pembangunan masih tergolong tinggi.
         </p>
       </>
     ),
@@ -90,18 +67,21 @@ const steps: { id: number; content: ReactNode }[] = [
     id: 2,
     content: (
       <>
-        <p className="bonet-card-text">
-          <span className="bonet-hl hl-magenta">Kabupaten Kudus</span> (indeks
-          di atas 2,00),{" "}
-          <span className="bonet-hl hl-magenta">Kota Semarang</span>, dan{" "}
-          <span className="bonet-hl hl-magenta">Kota Surakarta</span> secara
-          konsisten menempati kutub ketimpangan deviasi tertinggi.
+        <p>
+          Pada 2020, Indeks Williamson naik menjadi{" "}
+          <span className="hl hl-red-krisis">0,692</span>.
         </p>
-        <p className="bonet-card-text">
-          Tingginya PDRB per kapita di Kudus ditopang oleh skala industri
-          pengolahan tembakau, sementara Kota Semarang dan Surakarta didorong
-          oleh konsentrasi sektor perdagangan, jasa keuangan, dan infrastruktur
-          komersial modern.
+        <p>
+          PDRB per kapita{" "}
+          <span className="hl hl-green-peak">
+            Kabupaten Kudus: Rp123,89 juta
+          </span>
+          , sedangkan{" "}
+          <span className="hl hl-magenta-base">
+            Kabupaten Grobogan: Rp19,70 juta
+          </span>
+          . Selisih keduanya mencapai{" "}
+          <span className="hl hl-orange-gap">Rp104,19 juta</span>.
         </p>
       </>
     ),
@@ -110,20 +90,17 @@ const steps: { id: number; content: ReactNode }[] = [
     id: 3,
     content: (
       <>
-        <p className="bonet-card-text">
-          Fenomena paling menarik tampak pada konsistensi wilayah seperti{" "}
-          <span className="bonet-hl hl-magenta">Kabupaten Pemalang</span> dan{" "}
-          <span className="bonet-hl hl-magenta">Grobogan</span>. Selama hampir
-          satu dekade, angka deviasi absolut kedua daerah ini tidak beranjak
-          jauh, secara konstan tertahan pada kisaran{" "}
-          <strong>0,48 hingga 0,52</strong>.
+        <p>
+          Setelah pandemi, Indeks Williamson menurun hingga{" "}
+          <span className="hl hl-orange-end">0,677 pada 2025</span>.
         </p>
-        <p className="bonet-card-text">
-          Nilai yang relatif tetap menunjukkan bahwa pertumbuhan ekonomi
-          daerah-daerah tersebut cenderung mengikuti rata-rata provinsi.
-          Akibatnya, posisi mereka dalam perekonomian provinsi tidak banyak
-          berubah, baik untuk mendekati wilayah perkotaan maupun tertinggal
-          lebih jauh.
+        <p>
+          <span className="hl hl-green-peak">Kota Semarang: Rp167,24 juta</span>
+          , sementara{" "}
+          <span className="hl hl-magenta-base">
+            Kabupaten Pemalang: Rp24,05 juta
+          </span>
+          —selisih <span className="hl hl-red-bold">Rp143,19 juta</span>.
         </p>
       </>
     ),
@@ -132,624 +109,539 @@ const steps: { id: number; content: ReactNode }[] = [
     id: 4,
     content: (
       <>
-        <h3 className="bonet-card-title">Pergeseran Pascapandemi</h3>
-        <p className="bonet-card-text">
-          Perubahan ekonomi pada 2020 diikuti oleh perubahan tingkat ketimpangan
-          antarwilayah. Indeks{" "}
-          <span className="bonet-hl hl-orange">Kabupaten Cilacap</span> menurun
-          dari 0,819 pada 2016 menjadi 0,372 pada 2025.
+        <p>
+          Lintasan Indeks Williamson membuktikan bahwa perbaikan pemerataan Jawa
+          Tengah masih berlangsung perlahan di atas batas rawan kesenjangan
+          tinggi.
         </p>
-        <p className="bonet-card-text">
-          Penurunan ini menunjukkan bahwa kesenjangan ekonomi Cilacap terhadap
-          rata-rata provinsi semakin kecil, seiring dengan perubahan kondisi
-          sektor energi dan industri pengolahan.
-        </p>
-        <p className="bonet-card-text">
-          Sebaliknya, indeks{" "}
-          <span className="bonet-hl hl-magenta">Kota Semarang</span> meningkat
-          hingga 2,290 pada 2025. Hal ini menunjukkan bahwa kondisi ekonomi Kota
-          Semarang semakin berbeda dari rata-rata wilayah lainnya.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 5,
-    content: (
-      <>
-        <p className="bonet-card-text">
-          Indeks Bonet memperlihatkan posisi ketimpangan output per kapita
-          antarwilayah, tetapi belum menjawab bagaimana kapasitas tersebut
-          bergerak: apakah daerah berpendapatan rendah sedang mengejar
-          ketertinggalannya, atau justru kian tertinggal?
-        </p>
-        <p className="bonet-card-text">
-          Untuk melihat lintasan pertumbuhan dan pergeseran struktur ekonomi
-          daerah secara simultan, evaluasi dilanjutkan melalui analisis Tipologi
-          Klassen.
+        <p>
+          Akan tetapi, satu nilai agregat tingkat provinsi tidak mampu
+          menjelaskan anatomi internalnya:{" "}
+          <em>
+            daerah mana saja yang berada di atas tolok ukur provinsi, dan
+            wilayah mana yang tertinggal di bawah garis rata-rata?
+          </em>
         </p>
       </>
     ),
   },
 ];
 
-export default function IndeksBonet() {
+export default function IndeksWilliamson() {
   const sectionRef = useRef<HTMLElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [activeStep, setActiveStep] = useState(-1);
 
-  const [activeStep, setActiveStep] = useState(1);
-  const [year, setYear] = useState(2019);
-  const [fillMode, setFillMode] = useState<FillMode>("base");
-  const [badge, setBadge] = useState("Basis 2016–2019");
-  const [ready, setReady] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [tooltip, setTooltip] = useState<{
-    x: number;
-    y: number;
-    item: BonetEntry;
+  // Handle imperatif ke elemen D3, dipakai lintas effect
+  const d3Ref = useRef<{
+    dots: d3.Selection<SVGCircleElement, WilliamsonPoint, SVGGElement, unknown>;
+    linePath: d3.Selection<SVGPathElement, WilliamsonPoint[], null, undefined>;
+    annotations: d3.Selection<SVGGElement, unknown, null, undefined>;
+    totalLength: number;
+    introDone: boolean;
+    introStarted: boolean;
   } | null>(null);
 
-  // Dibaca di dalam callback D3 yang tidak ikut re-render
-  const yearRef = useRef(year);
-  yearRef.current = year;
-
-  const selRef = useRef<{
-    districts: d3.Selection<SVGPathElement, Kab, SVGGElement, unknown>;
-    labels: d3.Selection<SVGTextElement, Kab, SVGGElement, unknown>;
-  } | null>(null);
-
-  /* ---------- 1. Muat TopoJSON & render peta ---------- */
+  /* ---------- 1. Build chart sekali saat mount ---------- */
   useEffect(() => {
-    const svgEl = svgRef.current;
-    if (!svgEl) return;
+    const box = chartRef.current;
+    if (!box) return;
 
-    let cancelled = false;
     const svg = d3
-      .select(svgEl)
+      .select(box)
+      .append("svg")
       .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`)
       .attr("preserveAspectRatio", "xMidYMid meet");
 
-    const gMap = svg.append("g").attr("class", "bonet-map-group");
-    const gLabels = svg.append("g").attr("class", "bonet-labels-group");
+    const g = svg
+      .append("g")
+      .attr("transform", `translate(${MARGIN.left}, ${MARGIN.top})`);
 
-    const projection = d3.geoMercator();
-    const pathGenerator = d3.geoPath().projection(projection);
+    // Gridlines horizontal
+    const gridGroup = g.append("g").attr("class", "grid-group");
+    Y_TICKS.forEach((val) => {
+      gridGroup
+        .append("line")
+        .attr("class", "grid-line")
+        .attr("x1", 0)
+        .attr("x2", INNER_W)
+        .attr("y1", yScale(val))
+        .attr("y2", yScale(val));
+    });
 
-    d3.json("/jawatengah.json")
-      .then((topology) => {
-        if (cancelled || !topology) return;
+    // Garis dasar tebal
+    g.append("line")
+      .attr("class", "axis-baseline")
+      .attr("x1", 0)
+      .attr("x2", INNER_W)
+      .attr("y1", INNER_H)
+      .attr("y2", INNER_H);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const topo = topology as any;
-        const objKey = Object.keys(topo.objects)[0];
-        const all = (
-          topojson.feature(topo, topo.objects[objKey]) as unknown as {
-            features: Kab[];
-          }
-        ).features;
+    // Label sumbu Y
+    const yAxisGroup = g.append("g").attr("class", "axis y-axis");
+    Y_TICKS.forEach((val) => {
+      yAxisGroup
+        .append("text")
+        .attr("x", -12)
+        .attr("y", yScale(val) + 4)
+        .attr("text-anchor", "end")
+        .text(d3.format(".2f")(val));
+    });
 
-        // Buang fitur non-wilayah (waduk/hutan) yang tidak punya id resmi
-        const features = all.filter((f) => idToNameMap[String(f.id)]);
+    // Label sumbu X
+    const xAxisGroup = g.append("g").attr("class", "axis x-axis");
+    williamsonData.forEach((d) => {
+      xAxisGroup
+        .append("text")
+        .attr("x", xScale(d.year))
+        .attr("y", INNER_H + 22)
+        .attr("text-anchor", "middle")
+        .text(d.year);
+    });
 
-        projection.fitSize([WIDTH, HEIGHT], {
-          type: "FeatureCollection",
-          features,
-        });
+    // Step line (tersembunyi via stroke-dashoffset)
+    const linePath = g
+      .append("path")
+      .datum(williamsonData)
+      .attr("class", "rank-line")
+      .attr("d", lineGenerator);
 
-        const districts = gMap
-          .selectAll<SVGPathElement, Kab>("path")
-          .data(features)
-          .enter()
-          .append("path")
-          .attr("class", "bonet-district")
-          .attr("d", (d) => pathGenerator(d))
-          .attr("fill", (d) => {
-            const item = regionOf(d);
-            return item ? getBonetColor(item.baseAvg) : "#d6d6d6";
-          })
-          .on("mousemove", function (event: MouseEvent, d) {
-            const item = regionOf(d);
-            if (!item) return;
-            const [mX, mY] = d3.pointer(event, canvasRef.current);
-            setTooltip({ x: mX + 16, y: mY - 20, item });
-          })
-          .on("mouseleave", () => setTooltip(null));
+    const totalLength = linePath.node()!.getTotalLength();
+    linePath
+      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+      .attr("stroke-dashoffset", totalLength);
 
-        const labels = gLabels
-          .selectAll<SVGTextElement, Kab>("text")
-          .data(features)
-          .enter()
-          .append("text")
-          .attr("class", "bonet-map-label")
-          .attr("x", (d) => {
-            const c = pathGenerator.centroid(d);
-            return isNaN(c[0]) ? 0 : c[0];
-          })
-          .attr("y", (d) => {
-            const c = pathGenerator.centroid(d);
-            return isNaN(c[1]) ? 0 : c[1];
-          })
-          .attr("text-anchor", "middle")
-          .attr("opacity", 0);
+    // Titik data (r = 0 di awal)
+    const dots = g
+      .append("g")
+      .attr("class", "g-dots")
+      .selectAll<SVGCircleElement, WilliamsonPoint>(".season-circle")
+      .data(williamsonData)
+      .enter()
+      .append("circle")
+      .attr("class", (d) =>
+        d.year === 2020 ? "season-circle is-peak" : "season-circle",
+      )
+      .attr("cx", (d) => xScale(d.year))
+      .attr("cy", (d) => yScale(d.iw))
+      .attr("r", 0);
 
-        selRef.current = { districts, labels };
-        setReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
-      });
+    const annotations = g.append("g").attr("class", "g-annotations");
+
+    d3Ref.current = {
+      dots,
+      linePath,
+      annotations,
+      totalLength,
+      introDone: false,
+      introStarted: false,
+    };
 
     return () => {
-      cancelled = true;
-      svg.selectAll("*").remove();
-      selRef.current = null;
+      svg.remove();
+      d3Ref.current = null;
     };
   }, []);
 
-  /* ---------- 2. Step → tahun, mode warna, badge ---------- */
-  useEffect(() => {
-    const cfg = stepConfig[activeStep];
-    if (!cfg) return;
-    setBadge(cfg.badge);
-    if (cfg.year !== undefined) setYear(cfg.year);
-    if (cfg.fill !== undefined) setFillMode(cfg.fill);
-  }, [activeStep]);
-
-  /* ---------- 3. Warna peta mengikuti tahun / mode ---------- */
-  useEffect(() => {
-    const sel = selRef.current;
-    if (!ready || !sel) return;
-
-    const idx = year - BONET_START_YEAR;
-    sel.districts
-      .transition()
-      .duration(300)
-      .attr("fill", (d) => {
-        const item = regionOf(d);
-        if (!item) return "#d6d6d6";
-        return getBonetColor(
-          fillMode === "base" ? item.baseAvg : item.values[idx],
-        );
-      });
-  }, [ready, year, fillMode]);
-
-  /* ---------- 4. Highlight & label per step ---------- */
-  useEffect(() => {
-    const sel = selRef.current;
-    if (!ready || !sel) return;
-
-    const { districts, labels } = sel;
-    districts
-      .classed("highlight-top", false)
-      .classed("highlight-low", false)
-      .classed("dimmed", false);
-    labels.attr("opacity", 0);
-
-    const cfg = stepConfig[activeStep];
-    if (!cfg?.focusIds) return;
-
-    const focus = cfg.focusIds;
-    const idx = year - BONET_START_YEAR;
-
-    districts.each(function (d) {
-      const el = d3.select(this);
-      if (focus.includes(String(d.id))) {
-        el.classed(cfg.focusClass!, true);
-      } else {
-        el.classed("dimmed", true);
-      }
-    });
-
-    labels
-      .filter((d) => focus.includes(String(d.id)))
-      .text((d) => {
-        const item = regionOf(d);
-        return item ? `${item.rawName}: ${item.values[idx].toFixed(3)}` : "";
-      })
-      .transition()
-      .duration(300)
-      .attr("opacity", 1);
-  }, [ready, activeStep, year]);
-
-  /* ---------- 5. Observer kartu narasi ---------- */
+  /* ---------- 2. Observer untuk kartu narasi ---------- */
   useEffect(() => {
     const container = sectionRef.current;
     if (!container) return;
 
     const cards = container.querySelectorAll("[data-step]");
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          const step = parseInt(
+            (entry.target as HTMLElement).dataset.step || "0",
+          );
           if (entry.isIntersecting) {
-            setActiveStep(
-              parseInt((entry.target as HTMLElement).dataset.step || "1", 10),
-            );
+            setActiveStep(step);
+          } else if (step === 0 && entry.boundingClientRect.top > 0) {
+            // Di-scroll balik ke atas sebelum step 0 → reset animasi
+            setActiveStep(-1);
           }
         });
       },
-      { rootMargin: "-35% 0px -45% 0px", threshold: 0.1 },
+      { threshold: 0.5 },
     );
 
     cards.forEach((c) => observer.observe(c));
     return () => observer.disconnect();
   }, []);
 
-  const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const yr = parseInt(e.target.value, 10);
-    setYear(yr);
-    setFillMode("year");
-    setBadge(`Observasi: ${yr}`);
-  };
+  /* ---------- 3. Reaksi visual terhadap step ---------- */
+  useEffect(() => {
+    const api = d3Ref.current;
+    if (!api) return;
+
+    const { dots, linePath, annotations, totalLength } = api;
+
+    // Reset penuh (scroll balik ke atas sebelum step 0)
+    if (activeStep < 0) {
+      api.introStarted = false;
+      api.introDone = false;
+      dots.interrupt().attr("r", 0);
+      linePath.interrupt().attr("stroke-dashoffset", totalLength);
+      annotations.selectAll("*").remove();
+      annotations.classed("is-visible", false);
+      return;
+    }
+
+    // Intro: titik muncul bertahap, lalu garis berjalan
+    if (activeStep === 0) {
+      if (!api.introStarted) {
+        api.introStarted = true;
+        dots
+          .transition()
+          .duration(250)
+          .delay((_, i, nodes) => (i / nodes.length) * 1000)
+          .ease(d3.easeCubicIn)
+          .attr("r", (d) => (d.year === 2020 ? 7.5 : 4));
+
+        linePath
+          .transition()
+          .duration(2800)
+          .delay(1000)
+          .ease(d3.easeLinear)
+          .attr("stroke-dashoffset", 0)
+          .on("end", () => {
+            if (d3Ref.current) d3Ref.current.introDone = true;
+          });
+      }
+      annotations.selectAll("*").remove();
+      annotations.classed("is-visible", false);
+      return;
+    }
+
+    // Jika user melompat ke step berikutnya, selesaikan intro seketika
+    if (!api.introDone) {
+      dots.interrupt().attr("r", (d) => (d.year === 2020 ? 7.5 : 4));
+      linePath.interrupt().attr("stroke-dashoffset", 0);
+      api.introStarted = true;
+      api.introDone = true;
+    }
+
+    annotations.selectAll("*").remove();
+    annotations.classed("is-visible", false);
+    dots
+      .classed("active-step", false)
+      .transition()
+      .duration(200)
+      .attr("r", (d) => (d.year === 2020 ? 7.5 : 4));
+
+    if (activeStep === 1) {
+      dots
+        .filter((d) => d.year <= 2019)
+        .classed("active-step", true)
+        .transition()
+        .duration(250)
+        .attr("r", 5.5);
+    } else if (activeStep === 2) {
+      dots
+        .filter((d) => d.year === 2020)
+        .classed("active-step", true)
+        .transition()
+        .duration(250)
+        .attr("r", 9);
+    } else if (activeStep === 3) {
+      dots
+        .filter((d) => d.year === 2025)
+        .classed("active-step", true)
+        .transition()
+        .duration(250)
+        .attr("r", 8);
+    } else if (activeStep === 4) {
+      dots.classed("active-step", true);
+    }
+
+    // Callout
+    const cfg = williamsonCallouts[activeStep];
+    if (cfg) {
+      const callout = annotations
+        .append("g")
+        .attr(
+          "transform",
+          `translate(${xScale(cfg.year) + cfg.dx}, ${yScale(cfg.val) + cfg.dy})`,
+        );
+
+      callout
+        .append("rect")
+        .attr("class", "annotation-box")
+        .attr("width", cfg.w)
+        .attr("height", cfg.h);
+
+      callout
+        .append("text")
+        .attr("class", "annotation-year")
+        .attr("x", 8)
+        .attr("y", 16)
+        .text(cfg.title);
+
+      callout
+        .append("text")
+        .attr("class", "annotation-text")
+        .attr("x", 10)
+        .attr("y", 32)
+        .text(cfg.desc);
+
+      annotations.classed("is-visible", true);
+    }
+  }, [activeStep]);
 
   return (
-    <section ref={sectionRef} className="bonet-section">
-      {/* KIRI: sticky visual */}
-      <div className="bonet-sticky-col">
-        <div className="bonet-visual-wrapper">
-          <div className="bonet-legend-container">
-            <div className="font-bungee color-pink bonet-legend-title">
-              Indeks Bonet <p className="font-bungee color-green">(Nilai Absolut)</p>
-            </div>
-            <div className="bonet-legend-bar-wrap">
-              <div className="bonet-legend-bar">
-                {bonetLegendSwatches.map((s) => (
-                  <span
-                    key={s.color}
-                    className="legend-swatch"
-                    style={{ background: s.color }}
-                    title={s.title}
-                  />
-                ))}
-              </div>
-              <div className="bonet-legend-labels">
-                <span>← KETIMPANGAN RENDAH (MENDEKATI RATA-RATA)</span>
-                <span>KETIMPANGAN SEMAKIN TINGGI (EKSTREM) →</span>
-              </div>
-            </div>
-          </div>
-
-          <div ref={canvasRef} className="bonet-map-canvas">
-            <svg ref={svgRef} className="bonet-svg" />
-            {loadError && (
-              <p className="bonet-error">
-                Gagal memuat <code>/jawatengah.json</code>. Pastikan berkas ada
-                di folder <code>public/</code>.
-              </p>
-            )}
-            {tooltip && (
-              <div
-                className="bonet-tooltip"
-                style={{ left: tooltip.x, top: tooltip.y }}
-              >
-                <div className="bonet-tooltip-title">
-                  {tooltip.item.rawName}
-                </div>
-                <div>
-                  <strong>Tahun {year}:</strong>{" "}
-                  {tooltip.item.values[year - BONET_START_YEAR].toFixed(3)}
-                </div>
-                <div>
-                  <strong>Rata-rata 16–19:</strong>{" "}
-                  {tooltip.item.baseAvg.toFixed(3)}
-                </div>
-                <div>
-                  <strong>Rata-rata 21–25:</strong>{" "}
-                  {tooltip.item.postAvg.toFixed(3)}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bonet-controls">
-            <span className="bonet-year-badge">{badge}</span>
-            <div className="bonet-slider-container">
-              <label htmlFor="bonet-year-slider">Tahun Observasi:</label>
-              <input
-                id="bonet-year-slider"
-                type="range"
-                min={BONET_START_YEAR}
-                max={BONET_END_YEAR}
-                step={1}
-                value={year}
-                onChange={handleSlider}
-              />
-              <span className="bonet-slider-val">{year}</span>
-            </div>
-          </div>
+    <section ref={sectionRef} className="williamson-section">
+      {/* SISI KIRI: sticky visual (60%) */}
+      <div className="visual-container">
+        <div className="chart-header">
+          <h2 className="font-bungee color-pink">Indeks Williamson</h2>
+          <p className="meta-info">Periode 2016–2025 · 35 kabupaten/kota</p>
         </div>
+        <div ref={chartRef} className="chart-box" />
       </div>
 
-      {/* KANAN: narrative track */}
-      <div className="bonet-narrative-track">
+      {/* SISI KANAN: narrative track (40%) */}
+      <div className="narrative-track">
         {steps.map((s) => (
           <div
             key={s.id}
             data-step={s.id}
-            className={`bonet-step${activeStep === s.id ? " active" : ""}`}
+            className={`step-card${activeStep === s.id ? " is-active" : ""}`}
           >
-            <div className="bonet-card">{s.content}</div>
+            {s.content}
           </div>
         ))}
       </div>
 
       <style jsx global>{`
-        .bonet-section {
-          position: relative;
-          width: 100%;
-          box-sizing: border-box;
-  
-          color: #333333;
+        .williamson-section {
           display: flex;
-          flex-direction: row;
+          position: relative;
+          background-color: #ffffff;
+          min-height: 100vh;
           font-family: "Jost", var(--font-sans), sans-serif;
-          border-top: 1px solid #e5e7eb;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        .bonet-section * {
-          box-sizing: border-box;
+          color: #282828;
+          line-height: 1.6;
         }
 
-        .bonet-section .bonet-sticky-col {
+        .williamson-section .visual-container {
           width: 60%;
           height: 100vh;
           position: sticky;
           top: 0;
-          left: 0;
           display: flex;
           flex-direction: column;
-          justify-content: center;
           align-items: center;
-
-          padding: 1.5rem;
-          overflow: hidden;
+          justify-content: center;
+          padding: 2rem 2rem 2rem 3.5rem;
+          background: #ffffff;
+          z-index: 1;
         }
 
-        .bonet-section .bonet-visual-wrapper {
+        .williamson-section .chart-header {
           width: 100%;
-          height: 100%;
-          max-width: 900px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-
-        /* Legenda */
-        .bonet-section .bonet-legend-container {
-          width: 100%;
-          padding: 0.5rem 0;
+          max-width: 760px;
           margin-bottom: 0.5rem;
         }
-        .bonet-section .bonet-legend-title {
-          font-size: 1.15rem;
+
+        .williamson-section .chart-header .category-tag {
+          font-size: 13px;
           font-weight: 700;
-          color: #111111;
-          letter-spacing: 0.02em;
-          margin-bottom: 0.75rem;
-        }
-        .bonet-section .bonet-legend-bar-wrap {
-          width: 100%;
-        }
-        .bonet-section .bonet-legend-bar {
-          display: flex;
-          height: 10px;
-          width: 100%;
-          border-radius: 1px;
-          overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        .bonet-section .legend-swatch {
-          flex: 1;
-          height: 100%;
-        }
-        .bonet-section .bonet-legend-labels {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.75rem;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: #666666;
-          margin-top: 6px;
-          font-weight: 400;
+          letter-spacing: 0.08em;
+          color: #33c6ce;
+          margin-bottom: 2px;
         }
 
-        /* Kanvas peta */
-        .bonet-section .bonet-map-canvas {
+        .williamson-section .chart-header h2 {
+          font-size: 26px;
+          font-weight: 700;
+          color: #111827;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+
+        .williamson-section .chart-header .meta-info {
+          font-size: 13px;
+          color: #9ca3af;
+          font-weight: 500;
+          margin-top: 4px;
+        }
+
+        .williamson-section .chart-box {
           width: 100%;
-          flex-grow: 1;
+          max-width: 760px;
+          height: 480px;
           position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 0;
         }
-        .bonet-section .bonet-svg {
+
+        .williamson-section .chart-box svg {
           width: 100%;
           height: 100%;
-        }
-        .bonet-section .bonet-error {
-          position: absolute;
-          font-size: 0.85rem;
-          color: #b91c1c;
-          text-align: center;
-          max-width: 320px;
+          overflow: visible;
         }
 
-        .bonet-section .bonet-district {
-          cursor: pointer;
-          stroke: rgba(255, 255, 255, 0.85);
-          stroke-width: 0.8px;
-          stroke-linejoin: round;
-          transition:
-            fill 0.35s ease,
-            opacity 0.35s ease,
-            stroke 0.2s ease;
-        }
-        .bonet-section .bonet-district:hover {
-          stroke: #111111;
-          stroke-width: 2px;
-        }
-        .bonet-section .bonet-district.highlight-top {
-          stroke: #1b6934 !important;
-          stroke-width: 2.2px !important;
-        }
-        .bonet-section .bonet-district.highlight-low {
-          stroke: #ad2b7d !important;
-          stroke-width: 2.2px !important;
-        }
-        .bonet-section .bonet-district.dimmed {
-          opacity: 0.2 !important;
-        }
-
-        .bonet-section .bonet-map-label {
-          pointer-events: none;
-          font-size: 11px;
-          font-weight: 700;
-          fill: #111111;
-          text-shadow:
-            0 1px 2px #fff,
-            0 -1px 2px #fff,
-            1px 0 2px #fff,
-            -1px 0 2px #fff;
-        }
-
-        /* Tooltip */
-        .bonet-section .bonet-tooltip {
-          position: absolute;
-          pointer-events: none;
-          background: #ffffff;
-          border: 1px solid #cccccc;
-          padding: 0.5rem 0.75rem;
-          border-radius: 2px;
-          font-size: 0.78rem;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-          z-index: 50;
-          color: #333333;
-          line-height: 1.45;
-        }
-        .bonet-section .bonet-tooltip-title {
-          font-weight: 700;
-          color: #111111;
-          margin-bottom: 0.25rem;
-          border-bottom: 1px solid #eeeeee;
-          padding-bottom: 0.2rem;
-        }
-
-        /* Kontrol slider */
-        .bonet-section .bonet-controls {
-          margin-top: 1rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-        }
-        .bonet-section .bonet-year-badge {
-          background: #333333;
-          color: #ffffff;
-          padding: 0.2rem 0.5rem;
-          border-radius: 2px;
-          font-size: 0.72rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .bonet-section .bonet-slider-container {
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-          font-size: 0.78rem;
-          color: #555555;
-        }
-        .bonet-section .bonet-slider-container input[type="range"] {
-          cursor: pointer;
-        }
-        .bonet-section .bonet-slider-val {
-          font-weight: 700;
-          color: #111111;
-          min-width: 32px;
-        }
-
-        /* KANAN: narasi */
-        .bonet-section .bonet-narrative-track {
+        .williamson-section .narrative-track {
           width: 40%;
           position: relative;
           z-index: 2;
-          padding: 15vh 2.5rem 25vh 2rem;
+          padding: 35vh 3.5rem 50vh 1.5rem;
         }
-        .bonet-section .bonet-step {
-          min-height: 85vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+
+        .williamson-section .step-card {
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 2rem 2.25rem;
+          margin-bottom: 80vh;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+          transition: all 0.35s ease;
           opacity: 0.25;
-          transition: opacity 0.35s ease;
+          transform: translateY(15px);
         }
-        .bonet-section .bonet-step.active {
+
+        .williamson-section .step-card.is-active {
           opacity: 1;
+          transform: translateY(0);
+          border-color: #cbd5e1;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
         }
-        .bonet-section .bonet-card {
-          background: #ffffff;
-          border: 1px solid #e0e0e0;
-          border-radius: 2px;
-          padding: 2rem 1.75rem;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+
+        .williamson-section .step-card p {
+          font-size: 1.05rem;
+          line-height: 1.75;
+          color: #374151;
+          margin-bottom: 1rem;
         }
-        .bonet-section .bonet-card-title {
-          font-size: 1.35rem;
-          font-weight: 700;
-          color: #111111;
-          margin: 0 0 1rem 0;
-          line-height: 1.25;
-        }
-        .bonet-section .bonet-card-text {
-          font-size: 0.95rem;
-          line-height: 1.65;
-          color: #333333;
-          margin-bottom: 0.9rem;
-        }
-        .bonet-section .bonet-card-text:last-child {
+
+        .williamson-section .step-card p:last-child {
           margin-bottom: 0;
         }
 
-        .bonet-section .bonet-hl {
-          padding: 0.1rem 0.35rem;
-          border-radius: 2px;
-          font-size: 0.85rem;
+        /* Highlight badges */
+        .williamson-section .hl {
+          display: inline-block;
+          padding: 0.15em 0.45em;
+          border-radius: 4px;
+          font-weight: 600;
+          font-size: 0.95em;
+        }
+        .williamson-section .hl-red-krisis {
+          background-color: #fee2e2;
+          color: #991b1b;
+        }
+        .williamson-section .hl-green-peak {
+          background-color: #dcfce7;
+          color: #166534;
+        }
+        .williamson-section .hl-magenta-base {
+          background-color: #fce7f3;
+          color: #9d174d;
+        }
+        .williamson-section .hl-orange-gap {
+          background-color: #ffedd5;
+          color: #9a3412;
+        }
+        .williamson-section .hl-orange-end {
+          background-color: #ffedd5;
+          color: #c2410c;
+        }
+        .williamson-section .hl-red-bold {
+          background-color: #fee2e2;
+          color: #b91c1c;
           font-weight: 700;
         }
-        .bonet-section .hl-green {
-          background-color: #e2f0d9;
-          color: #1b6934;
+
+        /* Sumbu & grid */
+        .williamson-section .grid-line {
+          stroke: #e2e8f0;
+          stroke-dasharray: 4 4;
         }
-        .bonet-section .hl-magenta {
-          background-color: #f7e1ed;
-          color: #ad2b7d;
+        .williamson-section .axis text {
+          font-family: "Jost", var(--font-sans), sans-serif;
+          font-size: 11px;
+          fill: #94a3b8;
+          font-weight: 500;
         }
-        .bonet-section .hl-orange {
-          background-color: #fef0db;
-          color: #b25e00;
+        .williamson-section .axis path,
+        .williamson-section .axis line {
+          display: none;
+        }
+        .williamson-section .axis-baseline {
+          stroke: #cbd5e1;
+          stroke-width: 2px;
         }
 
-        @media (max-width: 860px) {
-          .bonet-section {
+        /* Garis & titik */
+        .williamson-section .rank-line {
+          fill: none;
+          stroke: #4d9221;
+          stroke-width: 2.25px;
+          stroke-linecap: square;
+        }
+        .williamson-section .season-circle {
+          fill: #c51b7d;
+          stroke: #ffffff;
+          stroke-width: 2px;
+          transition:
+            fill 0.25s,
+            stroke 0.25s;
+        }
+        .williamson-section .season-circle.is-peak {
+          fill: #c51b7d;
+        }
+        .williamson-section .season-circle.active-step {
+          fill: #c51b7d !important;
+          stroke: #cffafe !important;
+          stroke-width: 3.5px !important;
+        }
+
+        /* Anotasi */
+        .williamson-section .g-annotations {
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.45s ease;
+        }
+        .williamson-section .g-annotations.is-visible {
+          opacity: 1;
+        }
+        .williamson-section .annotation-box {
+          fill: #ffffff;
+          stroke: rgba(0, 0, 0, 0.12);
+          stroke-width: 1px;
+          filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.05));
+          rx: 3px;
+        }
+        .williamson-section .annotation-year {
+          font-size: 11px;
+          font-weight: 700;
+          fill: #9d174d;
+        }
+        .williamson-section .annotation-text {
+          font-size: 11px;
+          font-weight: 400;
+          fill: #475569;
+        }
+
+        @media (max-width: 880px) {
+          .williamson-section {
             flex-direction: column;
           }
-          .bonet-section .bonet-sticky-col {
+          .williamson-section .visual-container {
             width: 100%;
-            height: 48vh;
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid #e0e0e0;
-            z-index: 20;
+            height: 52vh;
+            padding: 1.5rem 1rem 0.5rem 1rem;
           }
-          .bonet-section .bonet-narrative-track {
+          .williamson-section .chart-box {
+            height: 100%;
+          }
+          .williamson-section .narrative-track {
             width: 100%;
-            padding: 2rem 1.25rem 15vh 1.25rem;
+            padding: 5vh 1.5rem 50vh 1.5rem;
           }
-          .bonet-section .bonet-step {
-            min-height: 65vh;
-          }
-          .bonet-section .bonet-card {
-            padding: 1.35rem 1.25rem;
+          .williamson-section .step-card {
+            margin-bottom: 55vh;
           }
         }
       `}</style>

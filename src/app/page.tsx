@@ -70,6 +70,13 @@ const TaxRatio = dynamic(() => import("@/components/scenes/TaxRatio"), {
   ssr: false,
 });
 
+const Kesimpulan = dynamic(() => import("@/components/scenes/Kesimpulan"), {
+  ssr: false,
+});
+const Saran = dynamic(() => import("@/components/scenes/Saran"), {
+  ssr: false,
+});
+
 export default function Home() {
   return (
     <main>
@@ -103,11 +110,11 @@ export default function Home() {
       {/* Scene 6c: Tipologi Klassen */}
       <TipologiKlassen />
 
-      {/* Scene 6d: SS Sederhana */}
-      <SsSederhana />
-
       {/* Scene 6e: LQ */}
       <Lq />
+
+      {/* Scene 6d: SS Sederhana */}
+      <SsSederhana />
 
       <ShiftShareMatrix />
 
@@ -134,6 +141,13 @@ export default function Home() {
 
       {/* Scene 6b: Tax Ratio */}
       <TaxRatio />
+
+      {/* Kesimpulan */}
+      <Kesimpulan />
+
+      {/* Saran */}
+      <Saran />
+
 
       {/* Footer */}
       <footer className="mt-16 w-full">

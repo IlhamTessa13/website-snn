@@ -21,7 +21,7 @@
  *   Sekunder = C (Industri) + D (Listrik & Gas) + E (Air/Limbah) + F (Konstruksi)
  *   Tersier  = G s.d. R,S,T,U (Perdagangan s.d. Jasa Lainnya)
  */
-export type MetricKey = "adhb" | "adhk" ;
+export type MetricKey = "adhb" | "adhk";
 
 export interface RegionDatum {
   /** Nama kanonik yang dipakai di seluruh aplikasi. */
@@ -398,6 +398,17 @@ export function valueOf(r: RegionDatum, metric: MetricKey): number | null {
 /* Narasi scrollytelling                                               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Model narasi (revisi 2):
+ * - Satu rangkaian scroll LINEAR berisi 6 step: step 0–2 memaparkan ADHB,
+ *   step 3–5 memaparkan ADHK. Tidak ada lagi cabang manual lewat tombol —
+ *   metrik peta & badge ADHB/ADHK di atas peta otomatis "bertukar" begitu
+ *   scroll memasuki step 3 (`step.metric` menentukan metrik aktif).
+ * - `focus` tidak menyimpan teks callout siap-pakai (nilainya beda antara
+ *   ADHB & ADHK); callout dihitung di komponen dari `valueOf()` sesuai
+ *   `step.metric`.
+ */
+
 /** Warna highlight inline, sesuai tabel "Ringkasan Aturan Warna Highlight" di brief. */
 export type HighlightTone = "green" | "magenta" | "orange" | "red";
 
@@ -414,135 +425,131 @@ export interface Segment {
 export interface MapFocus {
   region: string;
   tone: HighlightTone;
-  /** Teks callout di atas wilayah pada peta. */
-  callout: string;
 }
 
-export interface StoryStep {
-  /** Metrik yang otomatis aktif saat step ini masuk viewport. */
+export interface NarrativeStep {
+  /** Metrik yang aktif di peta & badge saat step ini masuk viewport. */
   metric: MetricKey;
-  eyebrow: string;
   title: string;
   body: Segment[];
   focus: MapFocus[];
-  /** Step penutup: lima wilayah kunci berkedip bergantian. */
-  cycle?: string[];
 }
 
-export const storySteps: StoryStep[] = [
+export const steps: NarrativeStep[] = [
   {
     metric: "adhb",
-    eyebrow: "Step 0",
-    title: "35 wilayah, satu provinsi",
+    title: "Sebaran Nilai Ekonomi Menurut Harga Berlaku",
     body: [
       {
-        text: "Provinsi Jawa Tengah terdiri atas 35 kabupaten dan kota dengan karakteristik ekonomi yang sangat beragam. ",
+        text: "Produk Domestik Regional Bruto Atas Dasar Harga Berlaku (ADHB) mengukur nilai tambah seluruh aktivitas ekonomi suatu wilayah pada tingkat harga yang berlaku di tahun observasi. ",
       },
       {
-        text: "Peta di samping menunjukkan sebaran nilai PDRB Atas Dasar Harga Berlaku (ADHB) tahun 2025 di setiap wilayah — semakin gelap warnanya, semakin besar kontribusi ekonominya terhadap provinsi.",
+        text: "Peta di samping menyajikan sebaran nilai tersebut pada 35 kabupaten/kota se-Jawa Tengah tahun 2025, diklasifikasikan ke dalam enam kelas quantile.",
         bold: true,
+      },
+      {
+        text: " Wilayah bergradasi hijau berada di atas rata-rata provinsi; wilayah bergradasi magenta berada jauh di bawahnya.",
       },
     ],
     focus: [],
   },
   {
     metric: "adhb",
-    eyebrow: "",
-    title: "Ekstrem PDRB ADHB",
+    title: "Dua Kutub yang Berjauhan",
     body: [
+      { text: "Pada indikator ADHB, " },
       {
-        text: "Dari sisi Produk Domestik Regional Bruto Atas Dasar Harga Berlaku, ",
-      },
-      {
-        text: "Kota Semarang mencatatkan PDRB tertinggi se-Jawa Tengah, mencapai Rp288,05 triliun pada 2025",
+        text: "Kota Semarang tercatat sebagai wilayah dengan nilai tertinggi, mencapai Rp288,05 triliun",
         tone: "green",
         region: "Kota Semarang",
         bold: true,
       },
       {
-        text: " — didukung kuat oleh sektor industri, perdagangan, dan jasa keuangan sebagai ibu kota provinsi. Di ujung yang berlawanan, ",
+        text: " — ditopang struktur ekonominya sebagai pusat industri, perdagangan, dan jasa keuangan provinsi. Sebaliknya, ",
       },
       {
-        text: "Kota Magelang mencatatkan PDRB terendah, hanya Rp12,71 triliun",
+        text: "Kota Magelang mencatatkan nilai terendah, hanya Rp12,71 triliun",
         tone: "magenta",
         region: "Kota Magelang",
       },
       {
-        text: ", wajar mengingat luas wilayahnya yang jauh lebih kecil dibanding kabupaten lain.",
+        text: " — konsekuensi logis dari luas wilayah administratifnya yang jauh lebih kecil dibanding 34 daerah lain.",
       },
     ],
     focus: [
-      { region: "Kota Semarang", tone: "green", callout: "Rp288,05 triliun" },
-      { region: "Kota Magelang", tone: "magenta", callout: "Rp12,71 triliun" },
+      { region: "Kota Semarang", tone: "green" },
+      { region: "Kota Magelang", tone: "magenta" },
     ],
   },
   {
-    metric: "adhk",
-    eyebrow: "",
-    title: "Ekstrem PDRB ADHK",
+    metric: "adhb",
+    title: "Satu Sisi dari Cerita yang Utuh",
     body: [
       {
-        text: "Pola yang sama terlihat pada PDRB Atas Dasar Harga Konstan (ADHK), yang mencerminkan pertumbuhan riil tanpa pengaruh inflasi. ",
+        text: "Nilai ADHB memotret skala ekonomi pada harga pasar tahun berjalan, sehingga turut memuat pengaruh inflasi antarwaktu dan antarwilayah. ",
       },
+      {
+        text: "Untuk menilai apakah pola ketimpangan ini murni cerminan aktivitas riil atau sekadar efek harga, perbandingan perlu dilakukan terhadap PDRB dengan basis harga konstan.",
+        bold: true,
+      },
+      {
+        text: " Gulir terus untuk melihat sebarannya menurut ADHK.",
+      },
+    ],
+    focus: [],
+  },
+  {
+    metric: "adhk",
+    title: "Menyaring Pengaruh Inflasi",
+    body: [
+      {
+        text: "Berbeda dengan ADHB, PDRB Atas Dasar Harga Konstan (ADHK) dihitung menggunakan harga tahun dasar 2010, sehingga pergerakan nilainya mencerminkan volume produksi riil — bukan kenaikan harga. ",
+      },
+      {
+        text: "Peta di samping kini menampilkan sebaran ADHK 2025 untuk 35 kabupaten/kota, dengan skema klasifikasi enam kelas yang sama seperti sebelumnya.",
+        bold: true,
+      },
+    ],
+    focus: [],
+  },
+  {
+    metric: "adhk",
+    title: "Pola yang Bertahan",
+    body: [
+      { text: "Pada indikator ini, " },
       {
         text: "Kota Semarang tetap memimpin dengan Rp182,12 triliun",
         tone: "green",
         region: "Kota Semarang",
+        bold: true,
       },
       { text: ", sementara " },
       {
-        text: "Kota Magelang berada di posisi terendah dengan Rp8,13 triliun",
+        text: "Kota Magelang kembali berada di titik terendah, Rp8,13 triliun",
         tone: "magenta",
         region: "Kota Magelang",
       },
-      { text: ". " },
       {
-        text: "Konsistensi posisi ini di kedua indikator menunjukkan bahwa ketimpangan struktur ekonomi antarwilayah bukan sekadar efek harga, melainkan memang mencerminkan perbedaan riil dalam skala aktivitas ekonomi.",
-        bold: true,
+        text: ". Posisi kedua wilayah tidak berubah dibandingkan ADHB — indikasi awal bahwa kesenjangan yang teramati bukan sekadar artefak harga.",
       },
     ],
     focus: [
-      { region: "Kota Semarang", tone: "green", callout: "Rp182,12 triliun" },
-      { region: "Kota Magelang", tone: "magenta", callout: "Rp8,13 triliun" },
+      { region: "Kota Semarang", tone: "green" },
+      { region: "Kota Magelang", tone: "magenta" },
     ],
   },
-  
   {
-    metric: "adhb",
-    eyebrow: "",
-    title: "Sintesis",
+    metric: "adhk",
+    title: "Ketimpangan yang Konsisten",
     body: [
       {
-        text: "Peta ini menegaskan bahwa ketimpangan ekonomi Jawa Tengah tidak berdiri di satu dimensi saja.",
+        text: "Konsistensi peringkat wilayah pada kedua indikator — ADHB maupun ADHK — menegaskan bahwa ketimpangan ekonomi antarwilayah di Jawa Tengah bersifat struktural, bukan sekadar bias inflasi.",
         bold: true,
       },
-      { text: " " },
       {
-        text: "Kota Semarang unggul hampir di semua lini",
-        tone: "green",
-        region: "Kota Semarang",
-      },
-      {
-        text: " — total, sekunder, maupun tersier — sementara keunggulan sektor primer justru berpindah ke kabupaten agraris seperti ",
-      },
-      { text: "Brebes", tone: "orange", region: "Kab. Brebes" },
-      { text: ", " },
-      { text: "Cilacap", tone: "orange", region: "Kab. Cilacap" },
-      { text: ", dan " },
-      { text: "Pati", tone: "orange", region: "Kab. Pati" },
-      { text: ". " },
-      { text: "Kota Magelang", tone: "magenta", region: "Kota Magelang" },
-      {
-        text: ", dengan wilayah terkecil, konsisten berada di posisi terendah di seluruh kategori. Pertanyaannya: seberapa jauh kesenjangan antarwilayah ini jika dibandingkan langsung dengan rata-rata provinsi? Gulir ke bawah untuk melihatnya.",
+        text: " Kota Semarang unggul hampir di seluruh dimensi ekonomi, sementara wilayah dengan luas administratif terbatas seperti Kota Magelang secara konsisten tertinggal. Bagian selanjutnya menelusuri bagaimana laju pertumbuhan tahunan membentuk dinamika ini dari waktu ke waktu.",
       },
     ],
     focus: [],
-    cycle: [
-      "Kota Semarang",
-      "Kab. Kudus",
-      "Kab. Cilacap",
-      "Kab. Brebes",
-      "Kota Magelang",
-    ],
   },
 ];

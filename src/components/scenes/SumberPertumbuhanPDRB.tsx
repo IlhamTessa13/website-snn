@@ -8,7 +8,7 @@ import {
   type ColKey,
 } from "@/data/SumberPertumbuhanPDRB";
 
-type HighlightColor = "amber" | "green" | "red" | "gray" | "orange";
+type HighlightColor = "green" | "red" | "amber" | "gray";
 
 interface CellTarget {
   rowId: string;
@@ -17,18 +17,16 @@ interface CellTarget {
 }
 
 interface Step {
-  eyebrow: string;
-  title: string;
   narrative: ReactNode;
-  targets: CellTarget[];
 }
 
+// Palet konsisten dengan aturan highlight Section 1 & 2:
+// hijau = mendorong/tertinggi, merah = menahan/selisih, amber = stabil/temuan menarik, abu = data kosong.
 const COLORS: Record<HighlightColor, { bg: string; text: string }> = {
-  amber: { bg: "#e6f5d0", text: "#4d9221" },
-  green: { bg: "#e6f5d0", text: "#4d9221" },
-  red: { bg: "#e6f5d0", text: "#4d9221" },
-  gray: { bg: "#e6f5d0", text: "#c51b7d" },
-  orange: { bg: "#e6f5d0", text: "#c51b7d" },
+  green: { bg: "#DCFCE7", text: "#166534" },
+  red: { bg: "#FEE2E2", text: "#B91C1C" },
+  amber: { bg: "#FFEDD5", text: "#C2410C" },
+  gray: { bg: "#F3F4F6", text: "#6B7280" },
 };
 
 function Mark({
@@ -41,161 +39,149 @@ function Mark({
   const c = COLORS[color];
   return (
     <span
-      className="rounded px-1 py-0.5 transition-colors duration-300"
-      style={{ background: c.bg, color: c.text, fontWeight: 500 }}
+      className="rounded px-1.5 py-0.5 font-semibold transition-colors duration-300"
+      style={{ background: c.bg, color: c.text }}
     >
       {children}
     </span>
   );
 }
 
+// targets: baris & kolom tabel yang ikut disorot saat step ini aktif (tabel di kanan tidak diubah strukturnya).
+const stepTargets: CellTarget[][] = [
+  [],
+  [
+    { rowId: "konsumsi-rt", cols: ["yoy", "ctoc"], color: "green" },
+    { rowId: "konsumsi-pemerintah", cols: ["qtoq"], color: "amber" },
+  ],
+  [
+    { rowId: "ekspor", cols: ["qtoq", "yoy"], color: "green" },
+    { rowId: "impor", cols: ["qtoq", "yoy"], color: "red" },
+    { rowId: "pmtb", cols: ["qtoq", "yoy", "ctoc"], color: "amber" },
+  ],
+  [
+    { rowId: "pdrb", cols: ["qtoq", "yoy", "ctoc"], color: "amber" },
+    { rowId: "inventori", cols: ["qtoq", "yoy", "ctoc"], color: "gray" },
+  ],
+];
+
 const steps: Step[] = [
   {
-    eyebrow: "",
-    title: "Pembuka",
     narrative: (
       <>
-        Pertumbuhan ekonomi tidak berasal dari satu sumber. Data di samping
-        merinci komponen mana yang mendorong — atau menahan — pertumbuhan PDRB
-        Jawa Tengah pada Triwulan IV 2025, dilihat dari tiga sudut pandang:
-        dibanding kuartal sebelumnya (q-to-q), dibanding kuartal yang sama tahun
-        lalu (y-on-y), dan dibanding total tahun lalu (c-to-c).
+        <p>
+          Pertumbuhan PDRB jarang berasal dari satu sumber tunggal. Untuk
+          memahami komposisinya, angka pertumbuhan Jawa Tengah pada Triwulan IV
+          2025 perlu dibaca dari tiga sudut pandang sekaligus: dibanding kuartal
+          sebelumnya (q-to-q), dibanding kuartal yang sama tahun lalu (y-on-y),
+          dan dibanding akumulasi tahun lalu (c-to-c).
+        </p>
+        <p>
+          Tabel di samping merinci kontribusi masing-masing komponen pengeluaran
+          terhadap ketiga ukuran tersebut.
+        </p>
       </>
     ),
-    targets: [],
   },
   {
-    eyebrow: "",
-    title: "Konsumsi Rumah Tangga: Penggerak Utama Tahunan",
     narrative: (
       <>
-        Pengeluaran konsumsi rumah tangga tetap menjadi penyumbang terbesar
-        pertumbuhan tahunan, menyumbang <Mark color="amber">2,64 poin</Mark>{" "}
-        terhadap pertumbuhan y-on-y dan <Mark color="amber">2,83 poin</Mark>{" "}
-        terhadap pertumbuhan sepanjang tahun (c-to-c) — mencerminkan daya beli
-        masyarakat sebagai fondasi utama ekonomi Jawa Tengah.
+        <p>
+          Konsumsi rumah tangga tetap menjadi penopang utama pertumbuhan
+          tahunan, dengan kontribusi <Mark color="green">2,64 poin</Mark> secara
+          y-on-y dan <Mark color="green">2,83 poin</Mark> secara c-to-c —
+          konsisten dengan karakternya sebagai komponen yang bergerak perlahan
+          namun stabil.
+        </p>
+        <p>
+          Belanja pemerintah menunjukkan pola yang berbeda: kontribusinya
+          melonjak tajam secara kuartalan menjadi{" "}
+          <Mark color="amber">3,01 poin</Mark>, jauh melebihi kontribusi
+          tahunannya yang hanya berkisar 0,19–0,69 poin. Pola ini konsisten
+          dengan siklus realisasi anggaran daerah yang lazim terkonsentrasi di
+          kuartal keempat, bukan indikasi percepatan belanja yang permanen.
+        </p>
       </>
     ),
-    targets: [{ rowId: "konsumsi-rt", cols: ["yoy", "ctoc"], color: "amber" }],
   },
   {
-    eyebrow: "",
-    title: "Belanja Pemerintah: Lonjakan Musiman Akhir Tahun",
     narrative: (
       <>
-        Pola berbeda terlihat pada belanja pemerintah: kontribusinya melonjak
-        tajam secara kuartalan, mencapai <Mark color="amber">3,01 poin</Mark>,
-        jauh di atas kontribusi tahunannya yang hanya 0,69–0,19 poin. Lonjakan
-        ini adalah pola musiman yang lazim terjadi di kuartal keempat, saat
-        realisasi anggaran pemerintah daerah dikebut menjelang akhir tahun
-        anggaran.
+        <p>
+          Neraca perdagangan menampilkan arah yang berlawanan antar ukuran
+          waktu. Secara kuartalan, impor tumbuh lebih cepat (
+          <Mark color="red">2,68 poin</Mark>) dibanding ekspor (
+          <Mark color="green">0,39 poin</Mark>), sehingga perdagangan luar
+          negeri berkontribusi menahan laju pertumbuhan kuartal keempat.
+        </p>
+        <p>
+          Secara tahunan gambarannya berimbang: ekspor tumbuh{" "}
+          <Mark color="green">5,49 poin</Mark>, namun impor turut tumbuh hampir
+          sama cepat di <Mark color="red">5,09 poin</Mark> — sehingga kontribusi
+          bersih neraca perdagangan terhadap pertumbuhan tahunan sesungguhnya
+          tipis, sekitar 0,4 poin saja.
+        </p>
+        <p>
+          Di sisi investasi, Pembentukan Modal Tetap Bruto justru tampil sebagai
+          komponen paling stabil: kontribusinya positif di ketiga ukuran (
+          <Mark color="amber">0,95</Mark> q-to-q,{" "}
+          <Mark color="amber">1,93</Mark> y-on-y,{" "}
+          <Mark color="amber">1,97</Mark> c-to-c) tanpa lonjakan maupun
+          penurunan tajam.
+        </p>
       </>
     ),
-    targets: [{ rowId: "konsumsi-pemerintah", cols: ["qtoq"], color: "amber" }],
   },
   {
-    eyebrow: "",
-    title: "Ekspor vs Impor: Siapa yang Menahan, Siapa yang Mendorong",
     narrative: (
       <>
-        Ekspor tumbuh solid, menyumbang <Mark color="green">5,49 poin</Mark>{" "}
-        terhadap pertumbuhan tahunan (y-on-y) — sumber pertumbuhan tunggal
-        terbesar setelah konsumsi rumah tangga. Tapi secara kuartalan ceritanya
-        berbalik:{" "}
-        <Mark color="red">
-          impor tumbuh lebih cepat (2,68 poin) dibanding ekspor (hanya 0,39
-          poin)
-        </Mark>
-        , menjadikan neraca perdagangan sebagai faktor yang justru menahan laju
-        pertumbuhan kuartal keempat.
+        <p>
+          Secara keseluruhan, PDRB Jawa Tengah tumbuh{" "}
+          <Mark color="amber">0,90%</Mark> dibanding kuartal sebelumnya,{" "}
+          <Mark color="amber">5,84%</Mark> dibanding periode yang sama tahun
+          lalu, dan <Mark color="amber">5,37%</Mark> sepanjang tahun 2025
+          dibanding 2024 — hasil akumulasi dari konsumsi rumah tangga yang
+          stabil, belanja pemerintah yang musiman, serta investasi yang
+          konsisten, sementara neraca perdagangan relatif netral secara tahunan.
+        </p>
+        <p>
+          Satu catatan metodologis: baris{" "}
+          <Mark color="gray">Perubahan Inventori</Mark> tidak memiliki data pada
+          rilis ini, sehingga jumlah kontribusi komponen di atas tidak persis
+          menyamai angka pertumbuhan PDRB total — selisih kecil yang lazim
+          disebut diskrepansi statistik dalam penghitungan PDRB.
+        </p>
       </>
     ),
-    targets: [
-      { rowId: "ekspor", cols: ["qtoq", "yoy"], color: "green" },
-      { rowId: "impor", cols: ["qtoq"], color: "red" },
-    ],
-  },
-  {
-    eyebrow: "",
-    title: "Investasi: Kontributor yang Konsisten",
-    narrative: (
-      <>
-        Investasi (Pembentukan Modal Tetap Bruto) tampil paling konsisten di
-        antara semua komponen, menyumbang kontribusi positif baik secara
-        kuartalan (<Mark color="amber">0,95</Mark>), tahunan (
-        <Mark color="amber">1,93</Mark>), maupun sepanjang tahun (
-        <Mark color="amber">1,97</Mark>) — sinyal bahwa aktivitas pembangunan
-        dan penanaman modal terus berjalan stabil tanpa lonjakan atau penurunan
-        tajam.
-      </>
-    ),
-    targets: [{ rowId: "pmtb", cols: ["qtoq", "yoy", "ctoc"], color: "amber" }],
-  },
-  {
-    eyebrow: "",
-    title: "Data yang Hilang: Perubahan Inventori",
-    narrative: (
-      <>
-        Satu baris tidak memiliki angka sama sekali:{" "}
-        <Mark color="gray">Perubahan Inventori</Mark>. Ketiadaan data pada
-        komponen ini turut menjelaskan mengapa total kontribusi seluruh komponen
-        di atas tidak persis menyamai angka pertumbuhan PDRB total — selisih
-        kecil yang lazim disebut sebagai diskrepansi statistik dalam
-        penghitungan PDRB.
-      </>
-    ),
-    targets: [
-      { rowId: "inventori", cols: ["qtoq", "yoy", "ctoc"], color: "gray" },
-    ],
-  },
-  {
-    eyebrow: "",
-    title: "Sintesis: PDRB Total",
-    narrative: (
-      <strong>
-        Secara keseluruhan, ekonomi Jawa Tengah tumbuh{" "}
-        <Mark color="orange">0,90%</Mark> dibanding kuartal sebelumnya,{" "}
-        <Mark color="orange">5,84%</Mark> dibanding periode yang sama tahun
-        lalu, dan <Mark color="orange">5,37%</Mark> sepanjang tahun 2025
-        dibanding 2024 — hasil akumulasi dari konsumsi rumah tangga yang stabil,
-        belanja pemerintah yang musiman, serta ekspor yang tumbuh lebih cepat
-        dari impor secara tahunan.
-      </strong>
-    ),
-    targets: [
-      { rowId: "pdrb", cols: ["qtoq", "yoy", "ctoc"], color: "orange" },
-    ],
   },
 ];
 
-function getCellStyle(step: Step, rowId: string, col: ColKey) {
-  const target = step.targets.find(
-    (t) => t.rowId === rowId && t.cols.includes(col),
-  );
+function getCellStyle(stepIdx: number, rowId: string, col: ColKey) {
+  const targets = stepTargets[stepIdx] ?? [];
+  const target = targets.find((t) => t.rowId === rowId && t.cols.includes(col));
   if (!target) return null;
   return COLORS[target.color];
 }
 
-function isRowActive(step: Step, rowId: string) {
-  return step.targets.some((t) => t.rowId === rowId);
+function isRowActive(stepIdx: number, rowId: string) {
+  const targets = stepTargets[stepIdx] ?? [];
+  return targets.some((t) => t.rowId === rowId);
 }
 
 export default function SumberPertumbuhanPDRB() {
   const [activeStep, setActiveStep] = useState(0);
   const sectionRef = useRef<HTMLDivElement>(null);
 
+  // Sama seperti Indeks Williamson: observer sederhana di atas kartu narasi
+  // yang berada dalam alur dokumen biasa (bukan marker buatan).
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      let best = -1;
-      let bestRatio = 0;
       entries.forEach((entry) => {
         const idx = parseInt((entry.target as HTMLElement).dataset.step || "0");
-        if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
-          bestRatio = entry.intersectionRatio;
-          best = idx;
+        if (entry.isIntersecting) {
+          setActiveStep(idx);
         }
       });
-      if (best >= 0) setActiveStep(best);
     },
     [],
   );
@@ -203,90 +189,61 @@ export default function SumberPertumbuhanPDRB() {
   useEffect(() => {
     const container = sectionRef.current;
     if (!container) return;
-    const stepEls = container.querySelectorAll("[data-step]");
+    const cards = container.querySelectorAll("[data-step]");
     const obs = new IntersectionObserver(handleIntersection, {
-      threshold: [0, 0.2, 0.4, 0.6, 0.8, 1],
+      threshold: 0.5,
     });
-    stepEls.forEach((s) => obs.observe(s));
+    cards.forEach((c) => obs.observe(c));
     return () => obs.disconnect();
   }, [handleIntersection]);
 
-  const current = steps[activeStep] ?? steps[0];
+  const currentIdx = activeStep;
 
   return (
-    <section ref={sectionRef} className="relative">
-      {/* Section Header */}
-      <div className="max-w-6xl mx-auto px-6 pt-24 pb-8">
-        <h2 className=" font-bungee color-pink heading-lg mt-2">
-          Sumber Pertumbuhan PDRB
-          <span className="font-bungee color-green"> Jawa Tengah
-            Triwulan IV 2025
-          </span>
-        </h2>
-        <p className="body-lg mt-3 max-w-2xl font-delius">
-          q-to-q, y-on-y, dan c-to-c — komponen pengeluaran mana yang mendorong,
-          dan mana yang menahan pertumbuhan ekonomi Jawa Tengah.
-        </p>
-      </div>
+    <section ref={sectionRef} className="sumber-pertumbuhan-section relative">
+      {/* SISI KANAN: visual sticky (58%) — judul, subjudul, dan tabel diam
+          di tempat selama section ini di-scroll, lepas setelah step terakhir. */}
+      <div className="sp-visual">
+        <div className="sp-visual-inner">
+          <div className="sp-header">
+            <h2 className="heading-lg font-bungee color-pink">
+              Sumber Pertumbuhan PDRB
+              <span className="font-bungee color-green">
+                {" "}
+                Jawa Tengah Triwulan IV 2025
+              </span>
+            </h2>
+            <p className="sp-subheading mt-1.5">
+              q-to-q, y-on-y, dan c-to-c — komponen pengeluaran mana yang
+              mendorong, dan mana yang menahan pertumbuhan ekonomi Jawa Tengah.
+            </p>
+          </div>
 
-      {/* Narrative (left) + Record Card (right, sticky) */}
-      <div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row gap-6 font-rubik">
-        {/* Left: Scrollable Narrative */}
-        <div className="lg:w-[42%] pb-24 font-rubik">
-          {steps.map((step, idx) => (
-            <div key={idx} data-step={idx} className="narrative-step font-rubik">
-              <div
-                className="rounded-lg p-5 md:p-6 transition-colors duration-500 font-rubik"
-                style={{
-                  background: activeStep === idx ? "#FFFFFF" : "#F9FAFB",
-                  borderLeft: `4px solid ${
-                    activeStep === idx
-                      ? step.targets[0]
-                        ? COLORS[step.targets[0].color].text
-                        : "#c51b7d"
-                      : "#9CA3AF"
-                  }`,
-                  boxShadow:
-                    activeStep === idx ? "0 2px 10px rgba(0,0,0,0.05)" : "none",
-                }}
-              >
-                <span className="heading-sm">{step.eyebrow}</span>
-                <h3 className="heading-md mt-2 text-lg font-rubik color-green font-bold">{step.title}</h3>
-                <p
-                  className="mt-3 text-[17px] leading-[1.6]"
-                  style={{ color: "#374151" }}
-                >
-                  {step.narrative}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Right: Sticky Record Card */}
-        <div className="lg:w-[58%] lg:sticky lg:top-4 lg:self-start">
           <div
             className="rounded-xl overflow-hidden"
             style={{
               background: "#FBF6E9",
               border: "1px solid #c51b7d",
-              padding: "40px 32px",
+              padding: "10px 24px 8px",
             }}
           >
-            <div className="text-xs font-bold uppercase tracking-widest text-center mb-6 font-rubik color-pink">
+            <div className="text-xs font-bold uppercase tracking-widest text-center mb-2 font-rubik color-pink">
               Komponen Sumber Pertumbuhan PDRB — Triwulan IV 2025
             </div>
 
-            <table className="w-full" style={{ borderCollapse: "collapse" }}>
+            <table
+              className="w-full sp-table"
+              style={{ borderCollapse: "collapse" }}
+            >
               <thead>
                 <tr>
                   <th className="text-left pb-1" />
                   {columnMeta.map((col) => (
                     <th key={col.key} className="text-right pb-1 pl-2">
-                      <div className="text-[11px] font-bold uppercase tracking-wide text-zinc-700">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-zinc-700">
                         {col.label}
                       </div>
-                      <div className="text-[9px] font-normal normal-case text-zinc-400 mt-0.5 leading-tight">
+                      <div className="text-[8px] font-normal normal-case text-zinc-400 mt-0.5 leading-tight">
                         {col.subtitle}
                       </div>
                     </th>
@@ -295,7 +252,7 @@ export default function SumberPertumbuhanPDRB() {
               </thead>
               <tbody>
                 {sumberPertumbuhanData.map((row) => {
-                  const rowActive = isRowActive(current, row.id);
+                  const rowActive = isRowActive(currentIdx, row.id);
                   return (
                     <tr
                       key={row.id}
@@ -308,7 +265,7 @@ export default function SumberPertumbuhanPDRB() {
                       }}
                     >
                       <td
-                        className="py-2 pr-2 text-[12px] uppercase font-bold tracking-tight align-middle"
+                        className="py-1 pr-2 text-[11px] uppercase font-bold tracking-tight align-middle"
                         style={{
                           color: row.isTotal ? "#1F2937" : "#3f3f46",
                           fontWeight: row.isTotal ? 800 : 700,
@@ -317,14 +274,14 @@ export default function SumberPertumbuhanPDRB() {
                         {row.label}
                       </td>
                       {(["qtoq", "yoy", "ctoc"] as ColKey[]).map((col) => {
-                        const cellColor = getCellStyle(current, row.id, col);
+                        const cellColor = getCellStyle(currentIdx, row.id, col);
                         return (
                           <td
                             key={col}
-                            className="py-2 pl-2 text-right align-middle"
+                            className="py-1 pl-2 text-right align-middle"
                           >
                             <span
-                              className="inline-block rounded px-2 py-1 text-[13px] font-medium tabular-nums transition-colors duration-[400ms] ease-out"
+                              className="inline-block rounded px-1.5 py-0.5 text-[12px] font-medium tabular-nums transition-colors duration-[400ms] ease-out"
                               style={{
                                 background: cellColor
                                   ? cellColor.bg
@@ -351,6 +308,134 @@ export default function SumberPertumbuhanPDRB() {
           </div>
         </div>
       </div>
+
+      {/* SISI KIRI: narrative track (42%) — kartu berurutan dalam alur
+          dokumen biasa, dim saat tidak aktif lalu terang saat discroll ke
+          tengah layar. Persis pola step-card di Indeks Williamson. */}
+      <div className="sp-narrative-track">
+        {steps.map((step, idx) => (
+          <div
+            key={idx}
+            data-step={idx}
+            className={`sp-step-card${activeStep === idx ? " is-active" : ""}`}
+          >
+            {step.narrative}
+          </div>
+        ))}
+      </div>
+
+      <style jsx global>{`
+        .sumber-pertumbuhan-section {
+          display: flex;
+          flex-direction: row-reverse;
+          position: relative;
+          background-color: #ffffff;
+          min-height: 100vh;
+          font-family: "Jost", var(--font-sans), sans-serif;
+          color: #282828;
+          line-height: 1.6;
+        }
+
+        .sumber-pertumbuhan-section .sp-visual {
+          width: 58%;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1.25rem 3.5rem 1.25rem 2rem;
+          background: #ffffff;
+          z-index: 1;
+          overflow-y: auto;
+        }
+
+        .sumber-pertumbuhan-section .sp-visual-inner {
+          width: 100%;
+          max-width: 720px;
+          margin: auto 0;
+        }
+
+        .sumber-pertumbuhan-section .sp-header {
+          margin-bottom: 0.4rem;
+        }
+
+        .sumber-pertumbuhan-section .sp-header h2.heading-lg {
+          font-size: 24px;
+          line-height: 1.25;
+        }
+
+        .sumber-pertumbuhan-section .sp-subheading {
+          font-size: 13px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .sumber-pertumbuhan-section .sp-narrative-track {
+          width: 42%;
+          position: relative;
+          z-index: 2;
+          padding: 35vh 1.5rem 50vh 3.5rem;
+        }
+
+        .sumber-pertumbuhan-section .sp-step-card {
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 2rem 2.25rem;
+          margin-bottom: 80vh;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+          transition: all 0.35s ease;
+          opacity: 0.25;
+          transform: translateY(15px);
+        }
+
+        .sumber-pertumbuhan-section .sp-step-card:last-of-type {
+          margin-bottom: 70vh;
+        }
+
+        .sumber-pertumbuhan-section .sp-step-card.is-active {
+          opacity: 1;
+          transform: translateY(0);
+          border-color: #cbd5e1;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+        }
+
+        .sumber-pertumbuhan-section .sp-step-card p {
+          font-size: 1.05rem;
+          line-height: 1.75;
+          color: #374151;
+          margin-bottom: 1rem;
+        }
+
+        .sumber-pertumbuhan-section .sp-step-card p:last-child {
+          margin-bottom: 0;
+        }
+
+        @media (max-width: 880px) {
+          .sumber-pertumbuhan-section {
+            flex-direction: column;
+          }
+          .sumber-pertumbuhan-section .sp-visual {
+            width: 100%;
+            height: auto;
+            position: relative;
+            top: auto;
+            padding: 1.5rem 1rem 1.5rem 1rem;
+          }
+          .sumber-pertumbuhan-section .sp-narrative-track {
+            width: 100%;
+            padding: 5vh 1.5rem 50vh 1.5rem;
+          }
+          .sumber-pertumbuhan-section .sp-step-card {
+            margin-bottom: 55vh;
+          }
+          .sumber-pertumbuhan-section .sp-step-card:last-of-type {
+            margin-bottom: 45vh;
+          }
+        }
+      `}</style>
     </section>
   );
 }

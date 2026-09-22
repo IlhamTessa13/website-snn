@@ -14,7 +14,11 @@ export const metadata: Metadata = {
     "Eksplorasi interaktif disparitas PDRB, pertumbuhan ekonomi, dan dinamika sektoral 35 kabupaten/kota di Provinsi Jawa Tengah melalui data journalism scrollytelling.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="id" className={`${inter.variable} antialiased`}>
       <head>

@@ -16,24 +16,15 @@ const points = konsumsiRTData.filter((d) => d.mpc !== null) as {
 }[];
 
 const mpcStory: Record<number, string> = {
-  2017:
-    "Mengawali data historis, setiap tambahan pendapatan Rp1 pada 2017 mendorong konsumsi naik sekitar Rp0,57 — masyarakat Jawa Tengah membelanjakan lebih dari separuh kenaikan pendapatannya.",
-  2018:
-    "Pola serupa berlanjut di 2018: dari setiap Rp1 tambahan pendapatan, sekitar Rp0,58 diterjemahkan menjadi konsumsi baru — respons masyarakat relatif stabil.",
-  2019:
-    "Tren ini terus konsisten hingga 2019, di mana Rp1 tambahan pendapatan mendorong Rp0,58 konsumsi tambahan — sinyal daya beli yang sehat menjelang pandemi.",
-  2020:
-    "Namun pandemi mengubah segalanya. Pada 2020, setiap Rp1 tambahan pendapatan hanya mendorong Rp0,43 konsumsi baru — masyarakat mulai menahan diri di tengah ketidakpastian.",
-  2021:
-    "Titik paling ekstrem terjadi di 2021: dari Rp1 tambahan pendapatan, hanya Rp0,34 yang dibelanjakan — respons konsumsi paling lemah sepanjang periode observasi.",
-  2022:
-    "Pemulihan mulai terasa di 2022. Setiap Rp1 tambahan pendapatan kini mendorong Rp0,62 konsumsi — hampir dua kali lipat respons tahun sebelumnya.",
-  2023:
-    "Puncaknya di 2023: Rp1 tambahan pendapatan mendorong Rp0,72 konsumsi baru — respons tertinggi sepanjang 2017-2025. Masyarakat benar-benar menjadi mesin penggerak ekonomi lewat belanja mereka.",
-  2024:
-    "Momentum ini sedikit mereda di 2024, dengan Rp1 tambahan pendapatan mendorong Rp0,68 konsumsi — masih kuat, namun mulai menunjukkan tanda normalisasi.",
-  2025:
-    "Di penghujung periode observasi, 2025 mencatat Rp1 tambahan pendapatan mendorong Rp0,57 konsumsi — kembali mendekati level awal periode, menutup siklus pemulihan pasca-pandemi.",
+  2017: "Mengawali data historis, setiap tambahan pendapatan Rp1 pada 2017 mendorong konsumsi naik sekitar Rp0,57 — masyarakat Jawa Tengah membelanjakan lebih dari separuh kenaikan pendapatannya.",
+  2018: "Pola serupa berlanjut di 2018: dari setiap Rp1 tambahan pendapatan, sekitar Rp0,58 diterjemahkan menjadi konsumsi baru — respons masyarakat relatif stabil.",
+  2019: "Tren ini terus konsisten hingga 2019, di mana Rp1 tambahan pendapatan mendorong Rp0,58 konsumsi tambahan — sinyal daya beli yang sehat menjelang pandemi.",
+  2020: "Namun pandemi mengubah segalanya. Pada 2020, setiap Rp1 tambahan pendapatan hanya mendorong Rp0,43 konsumsi baru — masyarakat mulai menahan diri di tengah ketidakpastian.",
+  2021: "Titik paling ekstrem terjadi di 2021: dari Rp1 tambahan pendapatan, hanya Rp0,34 yang dibelanjakan — respons konsumsi paling lemah sepanjang periode observasi.",
+  2022: "Pemulihan mulai terasa di 2022. Setiap Rp1 tambahan pendapatan kini mendorong Rp0,62 konsumsi — hampir dua kali lipat respons tahun sebelumnya.",
+  2023: "Puncaknya di 2023: Rp1 tambahan pendapatan mendorong Rp0,72 konsumsi baru — respons tertinggi sepanjang 2017-2025. Masyarakat benar-benar menjadi mesin penggerak ekonomi lewat belanja mereka.",
+  2024: "Momentum ini sedikit mereda di 2024, dengan Rp1 tambahan pendapatan mendorong Rp0,68 konsumsi — masih kuat, namun mulai menunjukkan tanda normalisasi.",
+  2025: "Di penghujung periode observasi, 2025 mencatat Rp1 tambahan pendapatan mendorong Rp0,57 konsumsi — kembali mendekati level awal periode, menutup siklus pemulihan pasca-pandemi.",
 };
 
 const WIDTH = 760;
@@ -68,7 +59,7 @@ export default function Mpc() {
   useMotionValueEvent(scrollYProgress, "change", (latest) => {
     const idx = Math.min(
       points.length - 1,
-      Math.max(0, Math.floor(latest * points.length))
+      Math.max(0, Math.floor(latest * points.length)),
     );
     setActiveIndex(idx);
   });
@@ -162,10 +153,7 @@ export default function Mpc() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.25 }}
                 >
-                  <div
-                    className="text-4xl font-bold tabular-nums color-pink"
-
-                  >
+                  <div className="text-4xl font-bold tabular-nums color-pink">
                     {activePoint.mpc.toFixed(2)}
                   </div>
                   <div className="text-xs text-zinc-400 mt-1 mb-4">

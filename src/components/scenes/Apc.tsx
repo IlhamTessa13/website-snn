@@ -186,17 +186,15 @@ export default function Apc() {
                               ? "text-zinc-500"
                               : "text-zinc-400"
                         }`}
-                      >
-
-                      </div>
+                      ></div>
                     )}
                   </motion.div>
                 </AnimatePresence>
 
                 <p className=" font-rubik text-xs text-zinc-500 leading-relaxed">
                   Semakin tinggi APC, semakin besar bagian gambar yang "terisi"
-                  yang merepresentasikan porsi pendapatan yang dibelanjakan untuk
-                  konsumsi.
+                  yang merepresentasikan porsi pendapatan yang dibelanjakan
+                  untuk konsumsi.
                 </p>
               </div>
             </div>
@@ -219,7 +217,6 @@ export default function Apc() {
                 </div>
 
                 <div className="rounded-xl border border-green-100 bg-green-50/60 p-4 font-rubik">
-
                   <p className="text-sm text-zinc-600 leading-relaxed mt-2">
                     {notes.implikasi}
                   </p>

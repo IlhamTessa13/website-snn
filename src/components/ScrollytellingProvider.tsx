@@ -1,13 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, createContext, useContext, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  createContext,
+  useContext,
+  ReactNode,
+} from "react";
 
 interface ScrollyContext {
   activeStep: number;
   progress: number;
 }
 
-const ScrollytellingContext = createContext<ScrollyContext>({ activeStep: 0, progress: 0 });
+const ScrollytellingContext = createContext<ScrollyContext>({
+  activeStep: 0,
+  progress: 0,
+});
 
 export function useScrollytelling() {
   return useContext(ScrollytellingContext);
@@ -30,7 +40,9 @@ export function ScrollytellingProvider({ children, onStepChange }: Props) {
 
   return (
     <ScrollytellingContext.Provider value={{ activeStep, progress }}>
-      <ScrollytellingInner onUpdate={handleStepChange}>{children}</ScrollytellingInner>
+      <ScrollytellingInner onUpdate={handleStepChange}>
+        {children}
+      </ScrollytellingInner>
     </ScrollytellingContext.Provider>
   );
 }
@@ -57,7 +69,7 @@ function ScrollytellingInner({
         let maxStep = 0;
         entries.forEach((entry) => {
           const stepIndex = parseInt(
-            (entry.target as HTMLElement).dataset.step || "0"
+            (entry.target as HTMLElement).dataset.step || "0",
           );
           if (entry.intersectionRatio > maxRatio) {
             maxRatio = entry.intersectionRatio;
@@ -71,7 +83,7 @@ function ScrollytellingInner({
       {
         root: null,
         threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-      }
+      },
     );
 
     steps.forEach((step) => observer.observe(step));

@@ -6,7 +6,7 @@ import {
   regions,
   metrics,
   valueOf,
-  storySteps,
+  steps,
   type MetricKey,
   type HighlightTone,
   type RegionDatum,
@@ -16,8 +16,19 @@ import {
 /* Konstanta visual                                                   */
 /* ================================================================== */
 
-/** Skala diverging 5 kelas (magenta → krem → hijau), sesuai brief. */
-const SCALE = ["#C2185B", "#F48FB1", "#F5F0E8", "#A5D6A7", "#2E7D32"];
+/**
+ * Skala diverging 6 kelas (PiYG) — enam warna persis seperti pada legenda
+ * acuan, disusun magenta (nilai rendah) → ... → hijau tua (nilai tinggi)
+ * supaya arah label "← Rendah / Tinggi →" tetap konsisten dengan sebelumnya.
+ */
+const SCALE = [
+  "#c51b7d",
+  "#e9a3c9",
+  "#fde0ef",
+  "#e6f5d0",
+  "#a1d76a",
+  "#4d9221",
+];
 const NO_DATA = "#E5E7EB";
 const ACCENT = "#F97316";
 
@@ -196,10 +207,14 @@ function centroidOf(polys: Poly[], p: Projection): [number, number] {
 /* Util: klasifikasi kuantil & format angka                           */
 /* ================================================================== */
 
-/** Batas kuantil 5 kelas dari nilai yang tersedia (bukan skala linear). */
-function quantileBreaks(values: number[]): number[] {
+/** Batas kuantil N-1 dari nilai yang tersedia (N = jumlah kelas warna), bukan skala linear. */
+function quantileBreaks(values: number[], classCount: number): number[] {
   const sorted = [...values].sort((a, b) => a - b);
-  return [0.2, 0.4, 0.6, 0.8].map((q) => {
+  const qs = Array.from(
+    { length: classCount - 1 },
+    (_, i) => (i + 1) / classCount,
+  );
+  return qs.map((q) => {
     const pos = (sorted.length - 1) * q;
     const lo = Math.floor(pos);
     const hi = Math.ceil(pos);
@@ -257,15 +272,18 @@ export default function PetaSebaranPDRB() {
   const [unmatched, setUnmatched] = useState<string[]>([]);
 
   const [activeStep, setActiveStep] = useState(0);
-  const [manualMetric, setManualMetric] = useState<MetricKey | null>(null);
-  const [pinned, setPinned] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [blink, setBlink] = useState(0);
 
   const narrativeRef = useRef<HTMLDivElement>(null);
+  const spacerRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const step = storySteps[activeStep] ?? storySteps[0];
-  const metric: MetricKey = manualMetric ?? step.metric;
+  /**
+   * Satu rangkaian linear 6 step: step 0–2 = ADHB, step 3–5 = ADHK.
+   * Metrik peta & badge murni mengikuti step yang sedang aktif di scroll —
+   * tidak ada lagi cabang toggle manual.
+   */
+  const step = steps[activeStep] ?? steps[0];
+  const metric: MetricKey = step.metric;
 
   const byName = useMemo(() => {
     const m = new Map<string, RegionDatum>();
@@ -422,26 +440,12 @@ export default function PetaSebaranPDRB() {
     const el = narrativeRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(onIntersect, {
-      rootMargin: "-40% 0px -40% 0px",
+      rootMargin: "-45% 0px -45% 0px",
       threshold: [0, 0.25, 0.5, 0.75, 1],
     });
     el.querySelectorAll("[data-step]").forEach((s) => obs.observe(s));
     return () => obs.disconnect();
   }, [onIntersect]);
-
-  /** Scroll mengembalikan kendali toggle & melepas pin. */
-  useEffect(() => {
-    setManualMetric(null);
-    setPinned(null);
-  }, [activeStep]);
-
-  /* ---------------- Kedip bergantian di step penutup ---------------- */
-
-  useEffect(() => {
-    if (!step.cycle) return;
-    const id = setInterval(() => setBlink((b) => b + 1), 900);
-    return () => clearInterval(id);
-  }, [step.cycle]);
 
   /* ---------------- Skala warna ---------------- */
 
@@ -450,7 +454,8 @@ export default function PetaSebaranPDRB() {
       .map((r) => valueOf(r, metric))
       .filter((v): v is number => v !== null);
     return {
-      breaks: vals.length >= 5 ? quantileBreaks(vals) : [],
+      breaks:
+        vals.length >= SCALE.length ? quantileBreaks(vals, SCALE.length) : [],
       hasData: vals.length,
     };
   }, [metric]);
@@ -470,74 +475,247 @@ export default function PetaSebaranPDRB() {
 
   const focusMap = useMemo(() => {
     const m = new Map<string, { tone: HighlightTone; callout: string }>();
-    step.focus.forEach((f) =>
-      m.set(f.region, { tone: f.tone, callout: f.callout }),
-    );
-
-    if (step.cycle && step.cycle.length > 0) {
-      const name = step.cycle[blink % step.cycle.length];
-      const r = byName.get(name);
+    step.focus.forEach((f) => {
+      const r = byName.get(f.region);
       const v = r ? valueOf(r, metric) : null;
-      m.set(name, { tone: "green", callout: v !== null ? formatValue(v) : "" });
-    }
-
-    if (pinned) {
-      const r = byName.get(pinned);
-      const v = r ? valueOf(r, metric) : null;
-      m.set(pinned, {
-        tone: m.get(pinned)?.tone ?? "orange",
-        callout: v !== null ? formatValue(v) : "data belum tersedia",
+      m.set(f.region, {
+        tone: f.tone,
+        callout: v !== null ? formatValue(v) : "",
       });
-    }
+    });
     return m;
-  }, [step, blink, pinned, byName, metric]);
+  }, [step, byName, metric]);
 
   const activeMetricDef = metrics.find((m) => m.key === metric)!;
-  const missingCount = regions.length - hasData;
+  void hasData; // seluruh 35 wilayah selalu punya nilai ADHB & ADHK — tidak ada kelas "belum tersedia"
+
+  /** Klik badge ADHB/ADHK di atas peta = lompat ke step pertama metrik itu. */
+  const jumpToMetric = useCallback((m: MetricKey) => {
+    const targetIdx = steps.findIndex((s) => s.metric === m);
+    spacerRefs.current[targetIdx]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
 
   /* ================================================================ */
 
   return (
-    <section className="relative bg-white">
+    <section className="pdrb-section">
       <style>{`
         @keyframes pdrb-pop { from { opacity: 0 } to { opacity: 1 } }
         .pdrb-region { transition: fill 600ms ease, stroke 300ms ease, stroke-width 300ms ease; }
-        .pdrb-card { transition: opacity 500ms ease, transform 500ms ease; }
-        .pdrb-term { cursor: pointer; border-radius: 4px; padding: 1px 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+      `}</style>
+      <style jsx global>{`
+        .pdrb-section {
+          display: flex;
+          position: relative;
+          background: #ffffff;
+          font-family: "Jost", var(--font-sans), sans-serif;
+          color: #282828;
+        }
+
+        /* ====== KIRI: kolom statis ====== */
+        .pdrb-section .pdrb-visual-col {
+          width: 60%;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          align-items: stretch;
+          gap: 0.65rem;
+          padding: 3.5vh 2rem 2.5vh 3.5rem;
+          background: #ffffff;
+          z-index: 1;
+          overflow: hidden;
+        }
+        .pdrb-section .pdrb-title {
+          font-size: clamp(19px, 2vw, 26px);
+          line-height: 1.15;
+          flex: 0 0 auto;
+        }
+        .pdrb-section .pdrb-legend-bar {
+          display: flex;
+          height: 10px;
+          width: 100%;
+          border-radius: 1px;
+          overflow: hidden;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          flex: 0 0 auto;
+        }
+        .pdrb-section .pdrb-legend-bar span {
+          flex: 1;
+          height: 100%;
+        }
+        .pdrb-section .pdrb-legend-labels {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.72rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #666666;
+          margin-top: 6px;
+          font-weight: 500;
+          flex: 0 0 auto;
+        }
+        .pdrb-section .pdrb-map-box {
+          position: relative;
+          flex: 1 1 auto;
+          min-height: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        .pdrb-section .pdrb-map-box svg {
+          width: 100%;
+          height: 100%;
+        }
+
+        /* Badge ADHB/ADHK mengambang di atas-tengah peta */
+        .pdrb-section .pdrb-metric-badge {
+          position: absolute;
+          top: 6px;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 3;
+          display: flex;
+          gap: 6px;
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid #e5e7eb;
+          border-radius: 999px;
+          padding: 4px;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+        .pdrb-section .pdrb-metric-pill {
+          padding: 5px 13px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          transition:
+            background 250ms ease,
+            color 250ms ease;
+          border: none;
+          cursor: pointer;
+        }
+
+        /* ====== KANAN: narasi — sama persis dengan pola Indeks Williamson ====== */
+        .pdrb-section .pdrb-narrative-col {
+          width: 40%;
+          position: relative;
+          z-index: 2;
+          /*
+           * Padding bawah sengaja dibuat 100vh (satu layar penuh) — bukan
+           * sekadar jeda kecil. Kartu step terakhir (min-height 85vh) perlu
+           * ruang scroll yang cukup untuk benar-benar keluar dari viewport
+           * (menghilang ke atas) SEBELUM section ini berakhir dan section
+           * berikutnya mulai tampil. Dengan ini, ada fase penuh di mana
+           * hanya peta yang terlihat sendirian, baru setelah itu pindah ke
+           * section selanjutnya.
+           */
+          padding: 35vh 3.5rem 100vh 1.5rem;
+        }
+        .pdrb-section .pdrb-step {
+          min-height: 85vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.25;
+          transform: translateY(15px);
+          transition:
+            opacity 0.35s ease,
+            transform 0.35s ease;
+        }
+        .pdrb-section .pdrb-step.is-active {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .pdrb-section .pdrb-card {
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 2rem 2.25rem;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+          width: 100%;
+          transition:
+            box-shadow 0.35s ease,
+            border-color 0.35s ease;
+        }
+        .pdrb-section .pdrb-step.is-active .pdrb-card {
+          border-color: #cbd5e1;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+        }
+        .pdrb-section .pdrb-card p {
+          font-size: 1.05rem;
+          line-height: 1.75;
+          color: #374151;
+        }
+
+        @media (max-width: 1023px) {
+          .pdrb-section {
+            flex-direction: column;
+          }
+          .pdrb-section .pdrb-visual-col {
+            width: 100%;
+            height: auto;
+            min-height: 100vh;
+            padding: 2rem 1.25rem;
+          }
+          .pdrb-section .pdrb-narrative-col {
+            width: 100%;
+            padding: 2rem 1.25rem 60vh 1.25rem;
+          }
+          .pdrb-section .pdrb-step {
+            min-height: 65vh;
+          }
+        }
       `}</style>
 
-      {/* ---------- Header section ---------- */}
-      <div className="max-w-7xl mx-auto px-6 pt-24 pb-6">
-
-        <h2 className="mt-2 text-3xl md:text-4xl font-bold font-bungee color-pink">
-          Sebaran PDRB <p className="color-pink font-bungee">Kabupaten/Kota di Jawa Tengah</p>
+      {/* ====== KIRI: judul + legenda + peta (badge ADHB/ADHK di atas peta) — statis, sticky penuh ====== */}
+      <div className="pdrb-visual-col">
+        <h2 className="pdrb-title font-bold font-bungee color-pink">
+          Sebaran PDRB
+          <br />
+          Kabupaten/Kota di Jawa Tengah
         </h2>
-        <p
-          className="mt-3 max-w-2xl font-delius"
-         
-        >
-          Peta di kiri diam di tempat; gulir kolom kanan untuk melihat bagaimana
-          nilai ekonomi 35 kabupaten/kota berpindah dominasi dari satu indikator
-          ke indikator berikutnya.
-        </p>
-      </div>
 
-      {/* ---------- Split screen ---------- */}
-      <div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row gap-10">
-        {/* ====== KIRI: peta sticky ====== */}
-        <div className="lg:w-[58%] lg:sticky lg:top-6 lg:self-start">
-          {/* Toggle indikator */}
-          <div className="flex flex-wrap gap-2 mb-4">
+        {/* Legenda */}
+        <div>
+          <div className="pdrb-legend-bar">
+            {SCALE.map((c) => (
+              <span key={c} style={{ background: c }} />
+            ))}
+          </div>
+          <div className="pdrb-legend-labels">
+            <span>← Nilai PDRB Rendah</span>
+            <span>Nilai PDRB Tinggi →</span>
+          </div>
+          <p className="mt-1.5" style={{ fontSize: 11.5, color: "#9CA3AF" }}>
+            {activeMetricDef.caption} · klasifikasi quantile break dari 35
+            kab/kota
+          </p>
+        </div>
+
+        {/* Peta */}
+        <div
+          className="pdrb-map-box rounded-xl border"
+          style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+        >
+          {/* Badge ADHB / ADHK — otomatis bertukar sesuai step, bisa diklik untuk lompat */}
+          <div className="pdrb-metric-badge">
             {metrics.map((m) => {
               const on = m.key === metric;
               return (
                 <button
                   key={m.key}
                   type="button"
-                  onClick={() => setManualMetric(m.key)}
-                  className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors"
+                  onClick={() => jumpToMetric(m.key)}
+                  className="pdrb-metric-pill"
                   style={{
-                    background: on ? ACCENT : "#F3F4F6",
+                    background: on ? ACCENT : "transparent",
                     color: on ? "#fff" : "#6B7280",
                   }}
                 >
@@ -547,248 +725,188 @@ export default function PetaSebaranPDRB() {
             })}
           </div>
 
-          {/* Legenda */}
-          <div className="mb-3">
-            <div className="flex h-2.5 rounded-full overflow-hidden">
-              {SCALE.map((c) => (
-                <div key={c} className="flex-1" style={{ background: c }} />
-              ))}
-            </div>
+          {geoError && (
             <div
-              className="flex justify-between mt-1.5"
-              style={{ fontSize: 12, color: "#9CA3AF" }}
+              className="p-10 text-center"
+              style={{ color: "#B91C1C", fontSize: 14 }}
             >
-              <span>Nilai PDRB Rendah</span>
-              <span>Rata-rata Provinsi</span>
-              <span>Nilai PDRB Tinggi</span>
+              Gagal memuat <code>/jawatengah.json</code> ({geoError}). Pastikan
+              file TopoJSON ada di folder <code>public/</code>.
             </div>
-            <p className="mt-2" style={{ fontSize: 12, color: "#9CA3AF" }}>
-              {activeMetricDef.caption} · klasifikasi quantile break dari 35
-              kab/kota
-              {missingCount > 0 && (
-                <>
-                  {" · "}
-                  <span style={{ color: "#B91C1C" }}>
-                    {missingCount} wilayah abu-abu: data sektoral belum tersedia
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
+          )}
 
-          {/* Peta */}
-          <div
-            className="relative rounded-xl border"
-            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
-          >
-            {geoError && (
-              <div
-                className="p-10 text-center"
-                style={{ color: "#B91C1C", fontSize: 14 }}
-              >
-                Gagal memuat <code>/jawatengah.json</code> ({geoError}).
-                Pastikan file TopoJSON ada di folder <code>public/</code>.
-              </div>
-            )}
+          {!geoError && !shapes && (
+            <div
+              className="p-10 text-center"
+              style={{ color: "#9CA3AF", fontSize: 14 }}
+            >
+              Memuat peta…
+            </div>
+          )}
 
-            {!geoError && !shapes && (
-              <div
-                className="p-10 text-center"
-                style={{ color: "#9CA3AF", fontSize: 14 }}
-              >
-                Memuat peta…
-              </div>
-            )}
+          {shapes && (
+            <svg
+              viewBox={`0 0 ${VB_W} ${VB_H}`}
+              preserveAspectRatio="xMidYMid meet"
+            >
+              {shapes.map((s, i) => {
+                const f = focusMap.get(s.name);
+                const isHover = hovered === s.name;
+                const lifted = Boolean(f) || isHover;
+                return (
+                  <path
+                    key={s.name}
+                    className="pdrb-region"
+                    d={s.path}
+                    fill={colorFor(s.name)}
+                    stroke={f ? TONE[f.tone].stroke : "#FFFFFF"}
+                    strokeWidth={f ? 2.5 : isHover ? 1.8 : 1}
+                    strokeLinejoin="round"
+                    onMouseEnter={() => setHovered(s.name)}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      cursor: "default",
+                      transformOrigin: `${s.cx}px ${s.cy}px`,
+                      transform: lifted ? "scale(1.05)" : "scale(1)",
+                      transition: "transform 400ms ease, fill 600ms ease",
+                      animation: `pdrb-pop 400ms ease both`,
+                      animationDelay: `${Math.min(i * 20, 700)}ms`,
+                    }}
+                  />
+                );
+              })}
 
-            {shapes && (
-              <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="w-full h-auto">
-                {shapes.map((s, i) => {
-                  const f = focusMap.get(s.name);
-                  const isHover = hovered === s.name;
-                  const lifted = Boolean(f) || isHover;
-                  return (
-                    <path
-                      key={s.name}
-                      className="pdrb-region"
-                      d={s.path}
-                      fill={colorFor(s.name)}
-                      stroke={f ? TONE[f.tone].stroke : "#FFFFFF"}
-                      strokeWidth={f ? 2.5 : isHover ? 1.8 : 1}
-                      strokeLinejoin="round"
-                      onMouseEnter={() => setHovered(s.name)}
-                      onMouseLeave={() => setHovered(null)}
-                      onClick={() =>
-                        setPinned((p) => (p === s.name ? null : s.name))
-                      }
-                      style={{
-                        cursor: "pointer",
-                        transformOrigin: `${s.cx}px ${s.cy}px`,
-                        transform: lifted ? "scale(1.05)" : "scale(1)",
-                        transition: "transform 400ms ease, fill 600ms ease",
-                        animation: `pdrb-pop 400ms ease both`,
-                        animationDelay: `${Math.min(i * 20, 700)}ms`,
-                      }}
+              {/* Dot penanda + callout untuk wilayah yang sedang disorot */}
+              {shapes.map((s) => {
+                const f = focusMap.get(s.name);
+                if (!f) return null;
+                const label = f.callout;
+                const w = Math.max(74, label.length * 6.4 + 16);
+                const flip = s.cy < 70;
+                const boxY = flip ? s.cy + 14 : s.cy - 40;
+                return (
+                  <g key={`cal-${s.name}`} pointerEvents="none">
+                    <circle cx={s.cx} cy={s.cy} r={4} fill="#111827" />
+                    <circle
+                      cx={s.cx}
+                      cy={s.cy}
+                      r={8}
+                      fill="#111827"
+                      opacity={0.15}
                     />
-                  );
-                })}
+                    {label && (
+                      <>
+                        <rect
+                          x={s.cx - w / 2}
+                          y={boxY}
+                          width={w}
+                          height={26}
+                          rx={6}
+                          fill={TONE[f.tone].bg}
+                          stroke={TONE[f.tone].stroke}
+                          strokeWidth={1}
+                        />
+                        <text
+                          x={s.cx}
+                          y={boxY + 17}
+                          textAnchor="middle"
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fill: TONE[f.tone].fg,
+                          }}
+                        >
+                          {label}
+                        </text>
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          )}
 
-                {/* Dot penanda + callout untuk wilayah yang sedang disorot */}
-                {shapes.map((s) => {
-                  const f = focusMap.get(s.name);
-                  if (!f) return null;
-                  const label = f.callout;
-                  const w = Math.max(74, label.length * 6.4 + 16);
-                  const flip = s.cy < 70;
-                  const boxY = flip ? s.cy + 14 : s.cy - 40;
-                  return (
-                    <g key={`cal-${s.name}`} pointerEvents="none">
-                      <circle cx={s.cx} cy={s.cy} r={4} fill="#111827" />
-                      <circle
-                        cx={s.cx}
-                        cy={s.cy}
-                        r={8}
-                        fill="#111827"
-                        opacity={0.15}
-                      />
-                      {label && (
-                        <>
-                          <rect
-                            x={s.cx - w / 2}
-                            y={boxY}
-                            width={w}
-                            height={26}
-                            rx={6}
-                            fill={TONE[f.tone].bg}
-                            stroke={TONE[f.tone].stroke}
-                            strokeWidth={1}
-                          />
-                          <text
-                            x={s.cx}
-                            y={boxY + 17}
-                            textAnchor="middle"
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              fill: TONE[f.tone].fg,
-                            }}
-                          >
-                            {label}
-                          </text>
-                        </>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-            )}
-
-            {/* Tooltip hover */}
-            {hovered && (
-              <div
-                className="absolute left-4 bottom-4 rounded-lg px-3 py-2 shadow-sm"
-                style={{ background: "#111827" }}
-              >
-                <p style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>
-                  {hovered}
-                </p>
-                <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>
-                  {(() => {
-                    const r = byName.get(hovered);
-                    const v = r ? valueOf(r, metric) : null;
-                    return v === null
-                      ? "Data belum tersedia"
-                      : `${activeMetricDef.label} · ${formatValue(v)}`;
-                  })()}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {unmatched.length > 0 && (
-            <p className="mt-2" style={{ fontSize: 11, color: "#B91C1C" }}>
-              {unmatched.length} wilayah di GeoJSON tidak cocok dengan data (
-              {unmatched.slice(0, 4).join(", ")}
-              {unmatched.length > 4 ? ", …" : ""}).
-            </p>
+          {/* Tooltip hover */}
+          {hovered && (
+            <div
+              className="absolute left-4 bottom-4 rounded-lg px-3 py-2 shadow-sm"
+              style={{ background: "#111827", zIndex: 4 }}
+            >
+              <p style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>
+                {hovered}
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>
+                {(() => {
+                  const r = byName.get(hovered);
+                  const v = r ? valueOf(r, metric) : null;
+                  return v === null
+                    ? "Data belum tersedia"
+                    : `${activeMetricDef.label} · ${formatValue(v)}`;
+                })()}
+              </p>
+            </div>
           )}
         </div>
 
-        {/* ====== KANAN: kartu narasi ====== */}
-        <div ref={narrativeRef} className="lg:w-[42%] pb-28">
-          {storySteps.map((s, idx) => {
-            const on = activeStep === idx;
-            return (
-              <div
-                key={idx}
-                data-step={idx}
-                className="min-h-[70vh] flex items-center"
-              >
-                <div
-                  className="pdrb-card rounded-2xl w-full"
-                  style={{
-                    background: "#F7F7F5",
-                    padding: 36,
-                    opacity: on ? 1 : 0.45,
-                    transform: on ? "translateY(0)" : "translateY(8px)",
-                    boxShadow: on ? "0 2px 18px rgba(17,24,39,0.06)" : "none",
-                  }}
+        {unmatched.length > 0 && (
+          <p style={{ fontSize: 10.5, color: "#B91C1C", flex: "0 0 auto" }}>
+            {unmatched.length} wilayah di GeoJSON tidak cocok dengan data (
+            {unmatched.slice(0, 4).join(", ")}
+            {unmatched.length > 4 ? ", …" : ""}).
+          </p>
+        )}
+      </div>
+
+      {/*
+        ====== KANAN: narasi ======
+        Kolom ini TIDAK sticky — dia sengaja lebih tinggi dari layar (setiap
+        step ≥85vh) sehingga scroll dokumen biasa menggeser seluruh kolom
+        dari bawah ke atas, persis pola di section Indeks Williamson: kartu
+        yang sedang di tengah viewport menyala penuh (`.is-active`), kartu
+        lain meredup lalu hilang begitu keluar dari area tengah layar.
+      */}
+      <div ref={narrativeRef} className="pdrb-narrative-col">
+        {steps.map((s, idx) => {
+          const on = activeStep === idx;
+          return (
+            <div
+              key={idx}
+              data-step={idx}
+              ref={(el) => {
+                spacerRefs.current[idx] = el;
+              }}
+              className={`pdrb-step${on ? " is-active" : ""}`}
+            >
+              <div className="pdrb-card">
+                <h3
+                  className="mt-1.5"
+                  style={{ fontSize: 22, fontWeight: 700, color: "#1F2937" }}
                 >
-                  <p
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      letterSpacing: "0.12em",
-                      textTransform: "uppercase",
-                      color: on ? ACCENT : "#9CA3AF",
-                    }}
-                  >
-                    {s.eyebrow}
-                  </p>
-                  <h3
-                    className="mt-1.5"
-                    style={{ fontSize: 22, fontWeight: 700, color: "#1F2937" }}
-                  >
-                    {s.title}
-                  </h3>
-                  <p
-                    className="mt-3"
-                    style={{ fontSize: 17, lineHeight: 1.6, color: "#374151" }}
-                  >
-                    {s.body.map((seg, i) => {
-                      const tone = seg.tone ? TONE[seg.tone] : null;
-                      const isTerm = Boolean(seg.region);
-                      return (
-                        <span
-                          key={i}
-                          className={isTerm ? "pdrb-term" : undefined}
-                          onClick={
-                            isTerm
-                              ? () =>
-                                  setPinned((p) =>
-                                    p === seg.region ? null : seg.region!,
-                                  )
-                              : undefined
-                          }
-                          style={{
-                            fontWeight: seg.bold ? 700 : 400,
-                            background: tone ? tone.bg : undefined,
-                            color: tone ? tone.fg : undefined,
-                            boxShadow:
-                              pinned && seg.region === pinned
-                                ? `inset 0 -2px 0 ${tone ? tone.fg : "#111827"}`
-                                : undefined,
-                          }}
-                        >
-                          {seg.text}
-                        </span>
-                      );
-                    })}
-                  </p>
-                </div>
+                  {s.title}
+                </h3>
+                <p className="mt-3">
+                  {s.body.map((seg, i) => {
+                    const tone = seg.tone ? TONE[seg.tone] : null;
+                    return (
+                      <span
+                        key={i}
+                        style={{
+                          fontWeight: seg.bold ? 700 : 400,
+                          background: tone ? tone.bg : undefined,
+                          color: tone ? tone.fg : undefined,
+                          borderRadius: tone ? 4 : undefined,
+                          padding: tone ? "1px 4px" : undefined,
+                        }}
+                      >
+                        {seg.text}
+                      </span>
+                    );
+                  })}
+                </p>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

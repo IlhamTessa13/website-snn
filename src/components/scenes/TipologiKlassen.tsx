@@ -37,16 +37,15 @@ const steps: { id: number; content: ReactNode }[] = [
     content: (
       <>
         <div className="klassen-card-tag">Struktur Awal (2016–2020)</div>
-        <h3 className="klassen-card-title">Dominasi Basis Agraris</h3>
         <p className="klassen-card-text">
-          Sebelum pandemi, sebagian besar kabupaten agraris di Jawa
-          Tengah—seperti <span className="badge-q2">Blora</span> (mencatatkan
-          pertumbuhan tinggi hingga 6,68%),{" "}
-          <span className="badge-q2">Purbalingga, dan Sragen</span>—berada di{" "}
+          Sebelum pandemi, sebagian besar kabupaten di Jawa Tengah, seperti{" "}
+          <span className="badge-q2">Blora</span> (mencatatkan pertumbuhan
+          tinggi hingga 6,68%),{" "}
+          <span className="badge-q2">Purbalingga, dan Sragen</span>berada di{" "}
           <span className="badge-q2">Kuadran II: Berkembang Cepat</span>. Mereka
           mencatatkan laju pertumbuhan di atas rata-rata provinsi (3,70%)
           meskipun tingkat pendapatan per kapitanya masih di bawah rata-rata
-          regional.
+          provinsi.
         </p>
       </>
     ),
@@ -64,11 +63,10 @@ const steps: { id: number; content: ReactNode }[] = [
         <p className="klassen-card-text">
           Periode pascapandemi memicu pergeseran konstelasi yang tajam seiring
           naiknya rata-rata PDRB provinsi menjadi Rp44,91 juta. Sejumlah daerah
-          sukses naik kelas ke <span className="badge-q1">Kuadran I</span>,
-          namun sebaliknya, <span className="badge-q4">Blora</span> justru
-          mengalami kontraksi dan tergeser turun dari{" "}
-          <span className="badge-q2">Kuadran II</span> ke{" "}
-          <span className="badge-q4">Kuadran IV: Relatif Tertinggal</span>{" "}
+          sukses naik kelas ke <span className="badge-q2">Kuadran II</span>,
+          namun sebaliknya, <span className="badge-q1">Blora</span> justru
+          bergeser turun dari <span className="badge-q2">Kuadran II</span> ke{" "}
+          <span className="badge-q1">Kuadran IV: Relatif Tertinggal</span>{" "}
           akibat pelambatan laju pertumbuhan di bawah rata-rata.
         </p>
       </>
@@ -81,15 +79,13 @@ const steps: { id: number; content: ReactNode }[] = [
         <div className="klassen-card-tag">
           Koridor Industri &amp; Manufaktur
         </div>
-        <h3 className="klassen-card-title">Divergensi Sektoral</h3>
         <p className="klassen-card-text">
-          <strong>Batang</strong> dan <strong>Kendal</strong> melesat melakukan
-          akselerasi di atas rata-rata provinsi berkat ekspansi kawasan
-          industri. Sementara itu, <strong>Kudus</strong> dan{" "}
+          <strong>Kendal</strong> beradadi atas rata-rata provinsi berkat
+          ekspansi kawasan industri. Sementara itu, <strong>Kudus</strong> dan{" "}
           <strong>Cilacap</strong> tetap kokoh berada di{" "}
           <span className="badge-q3">Kuadran III: Maju Tertekan</span> karena
-          tingginya PDRB per kapita tidak diiringi oleh laju pertumbuhan ekonomi
-          yang tinggi pascasyok global.
+          tingginya PDRB per kapita tidak diiringi oleh laju pertumbuhan
+          ekonomi.
         </p>
       </>
     ),
@@ -98,12 +94,14 @@ const steps: { id: number; content: ReactNode }[] = [
     id: 9,
     content: (
       <>
-        <h3 className="klassen-card-title">Transformasi Wilayah</h3>
         <p className="klassen-card-text">
-          Pemulihan ekonomi regional bergerak sangat heterogen. Kehadiran
-          infrastruktur Jalan Tol Trans-Jawa terbukti menjadi katalisator utama
-          dalam membentuk aglomerasi dan redistribusi pusat pertumbuhan baru di
-          luar koridor tradisional Kedungsepur.
+          Struktur ekonomi antar-kabupaten/kota di Jawa Tengah menunjukkan
+          variasi yang cukup beragam. Angka agregat di tingkat provinsi belum
+          sepenuhnya mencerminkan sektor spesifik yang menjadi penggerak di
+          setiap wilayah. Oleh karena itu, analisis Location Quotient (LQ)
+          digunakan untuk menentukan kapasitas ekspor perekonomian daerah dan
+          derajat self-sufficiency suatu lapangan usaha di masing-masing
+          kabupaten/kota.
         </p>
       </>
     ),
@@ -406,7 +404,9 @@ export default function TipologiKlassen() {
       <div className="klassen-sticky-col">
         <div className="klassen-visual-wrapper">
           <div className="klassen-header">
-            <div className="klassen-title font-bungee color-green">Tipologi Klassen</div>
+            <div className="klassen-title font-bungee color-green">
+              Tipologi Klassen
+            </div>
             <div className="klassen-legend">
               {(Object.keys(quadLabels) as Quadrant[]).map((q) => (
                 <div key={q} className="legend-item">

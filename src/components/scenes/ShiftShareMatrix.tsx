@@ -180,15 +180,15 @@ const total2016: TotalRow = {
 const steps2016: NarrativeStep[] = [
   {
     step: 1,
-    tag: "Pengantar Makro",
-    title: "Fondasi Ekonomi (2016 - 2020)",
+    tag: "Pengantar",
+    title: "",
     text: "Analisis Shift Share membantu kita melihat sejauh mana kinerja perekonomian lapangan usaha dipengaruhi oleh pertumbuhan makro dan struktur sektoral.",
   },
   {
     step: 2,
-    tag: "Komponen Pi",
-    title: "Struktur Sektoral Belum Progresif",
-    text: "Secara total, nilai Proportionality Shift (Pi) bernilai negatif, mengindikasikan komposisi lapangan usaha belum mengarah pada perekonomian yang progresif.",
+    tag: "Pengantar",
+    title: "",
+    text: "Melalui analisis Shift-Share, kita dapat mengkaji kinerja perekonomian daerah secara komprehensif dari berbagai dimensi pertumbuhan. Kita bisa membedah mulai dari Pangsa Wilayah (NI) untuk melihat sejauh mana skala ekonomi awal dan pengaruh tren makro nasional, Pergeseran Proporsional (PI) guna mengetahui keunggulan bauran struktur industri, hingga Pergeseran Pangsa Wilayah (DI) untuk mengukur tingkat daya saing murni suatu sektor di tingkat lokal, beserta total perubahannya.",
   },
   {
     step: 3,
@@ -383,7 +383,7 @@ const steps2021: NarrativeStep[] = [
     step: 4,
     tag: "Pangsa Wilayah (Ni)",
     title: "Sektor Pendorong Pertumbuhan Utama",
-    text: "Melalui komponen Regional Share (Ni), kategori dengan ukuran ekonomi yang kuat di Jawa Tengah bertindak sebagai pendorong pertumbuhan bagi kategori yang sama di tingkat nasional, seperti dominasi yang ditunjukkan oleh Sektor Industri Pengolahan.",
+    text: "Sektor Industri Pengolahan mencatatkan nilai Regional Share (NI) tertinggi sebesar 73.733,82. Besarnya nilai NI ini menunjukkan bahwa sebagian besar pertumbuhan absolut sektor tersebut digerakkan oleh dinamika pertumbuhan ekonomi nasional secara umum, di mana skala ekonomi awal yang sudah besar di Jawa Tengah membuat sektor ini otomatis ikut bertumbuh sejalan dengan tren acuan wilayah yang lebih luas.",
     highlight: "c-21",
   },
   {

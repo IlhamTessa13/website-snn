@@ -531,7 +531,10 @@ export default function Lq() {
         <div className="lq-visual-wrapper">
           <div className="lq-header">
             <div className="font-bungee color-pink lq-title">
-              Location Quotient (LQ) <p className="font-bungee color-green">Jawa Tengah terhadap Nasional</p>
+              Location Quotient (LQ){" "}
+              <p className="font-bungee color-green">
+                Jawa Tengah terhadap Nasional
+              </p>
             </div>
             <div className="lq-legend">
               <div className="legend-tag">
@@ -592,9 +595,10 @@ export default function Lq() {
                     mendekati ambang batas 1,00 (dari rata-rata 1,032 ke 1,011).
                   </p>
                   <p className="lq-card-text">
-                    Laju pertumbuhan sektor pertanian di Jawa Tengah bergerak
-                    lebih lambat dibanding rata-rata nasional, membuat
-                    keunggulan komparatifnya kian menipis.
+                    Meskipun demikian, sebaran titik trennya menunjukkan
+                    pergerakan yang terus menurun dari tahun ke tahun, sehingga
+                    pergerakan nilai LQ ini perlu dicermati secara berkala
+                    terhadap batas acuan.
                   </p>
                 </>
               )}
@@ -613,13 +617,11 @@ export default function Lq() {
 
               {s.step === 4 && (
                 <p className="lq-card-text">
-                  Pada kelompok non-basis, dinamika terlihat jelas saat krisis
-                  2020. Sektor{" "}
+                  Pada kelompok non-basis, beberapa lapangan usaha seperti{" "}
                   <span className="hl-green">Informasi dan Komunikasi (J)</span>{" "}
-                  sempat masuk kategori basis (LQ 1,001) akibat peningkatan
-                  aktivitas daring, sementara sektor{" "}
-                  <span className="hl-magenta">Transportasi (H)</span> anjlok
-                  cukup dalam sebelum pulih kembali.
+                  dan <span className="hl-green">Transportasi (H)</span>{" "}
+                  menunjukkan tingkat pemenuhan kebutuhan domestik yang belum
+                  sepenuhnya mendominasi skala nasional.
                 </p>
               )}
 
@@ -635,10 +637,10 @@ export default function Lq() {
               {s.step === 5 && (
                 <>
                   <p className="lq-card-text">
-                    Perencanaan pembangunan perlu difokuskan pada penguatan
-                    sektor pertanian agar tidak kehilangan status basisnya,
-                    sembari mengoptimalkan sektor jasa yang terus menunjukkan
-                    tren pertumbuhan relatif positif.
+                    Perencanaan pembangunan daerah perlu difokuskan pada
+                    pemeliharaan ketahanan sektor-sektor basis utama, sekaligus
+                    mengidentifikasi peluang penguatan pada sektor non-basis
+                    yang menunjukkan tren pergerakan positif.
                   </p>
                   <p
                     className="lq-card-text"
@@ -647,12 +649,7 @@ export default function Lq() {
                       color: "#6b7280",
                       marginTop: "0.4rem",
                     }}
-                  >
-                    <em>
-                      Arahkan kursor pada kode sektor di grafik untuk melihat
-                      tren tahunan 2016–2025 secara mendalam.
-                    </em>
-                  </p>
+                  ></p>
                 </>
               )}
             </div>

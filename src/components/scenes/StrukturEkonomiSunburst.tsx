@@ -1,335 +1,868 @@
 // src/components/scenes/StrukturEkonomiSunburst.tsx
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as d3 from "d3";
 import {
+  dataLapanganUsaha,
   getHierarchicalData,
-  narrativeSteps,
   type HierarchyData,
 } from "@/data/strukturEkonomi";
 
-export default function StrukturEkonomiSunburst() {
-  const [activeStep, setActiveStep] = useState(0);
-  const sectionRef = useRef<HTMLDivElement>(null);
+/* ============================================================
+   1. AGREGASI DATA (untuk panel statistik samping)
+   ============================================================ */
+const PRIMER_CODES = ["A", "B"];
+const SEKUNDER_CODES = ["C", "D", "E", "F"];
+const TERSIER_CODES = dataLapanganUsaha
+  .map((d) => d.code)
+  .filter((c) => !PRIMER_CODES.includes(c) && !SEKUNDER_CODES.includes(c));
 
-  // Data State for 2016 and 2025
-  const data2016 = useMemo(() => getHierarchicalData(2016), []);
-  const data2025 = useMemo(() => getHierarchicalData(2025), []);
+function sumSektor(codes: string[], year: number) {
+  return dataLapanganUsaha
+    .filter((d) => codes.includes(d.code))
+    .reduce((acc, d) => acc + (d.values[year] ?? 0), 0);
+}
 
-  // Determine which year to show based on step
-  const activeYear = activeStep < 2 ? 2016 : 2025;
-  const activeData = activeStep < 2 ? data2016 : data2025;
+const YEARS = [2016, 2025] as const;
+type Year = (typeof YEARS)[number];
+type Sektor = "Primer" | "Sekunder" | "Tersier";
+const SEKTOR_ORDER: Sektor[] = ["Primer", "Sekunder", "Tersier"];
 
-  // Scroll detection
-  const handleIntersection = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      let best = -1;
-      let bestRatio = 0;
-      entries.forEach((entry) => {
-        const idx = parseInt((entry.target as HTMLElement).dataset.step || "0");
-        if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
-          bestRatio = entry.intersectionRatio;
-          best = idx;
-        }
-      });
-      if (best >= 0) setActiveStep(best);
-    },
-    [],
+const SEKTOR_VALUE: Record<Year, Record<Sektor, number>> = {
+  2016: {
+    Primer: sumSektor(PRIMER_CODES, 2016),
+    Sekunder: sumSektor(SEKUNDER_CODES, 2016),
+    Tersier: sumSektor(TERSIER_CODES, 2016),
+  },
+  2025: {
+    Primer: sumSektor(PRIMER_CODES, 2025),
+    Sekunder: sumSektor(SEKUNDER_CODES, 2025),
+    Tersier: sumSektor(TERSIER_CODES, 2025),
+  },
+};
+
+/* ============================================================
+   2. PALET WARNA — satu warna per sektor (sama untuk 2016 & 2025):
+   Primer = hijau tengah, Sekunder = oranye tengah, Tersier = pink
+   tengah. Ring luar (17 lapangan usaha) memakai GRADASI dari warna
+   sektor induknya (childShades) supaya tiap lapangan usaha tetap
+   bisa dibedakan satu sama lain.
+   ============================================================ */
+const PALETTE: Record<Sektor, { arc: string; text: string; bg: string }> = {
+  Primer: { arc: "#a1d76a", text: "#4d7c0f", bg: "#F1F8E5" },
+  Sekunder: { arc: "#fdae61", text: "#c2410c", bg: "#FFF3E6" },
+  Tersier: { arc: "#e9a3c9", text: "#9d174d", bg: "#FCE7F3" },
+};
+
+function childShades(baseColor: string, n: number): string[] {
+  const base = d3.hsl(baseColor);
+  const light = d3.hsl(base.h, base.s, Math.min(0.9, base.l + 0.28));
+  const dark = d3.hsl(
+    base.h,
+    Math.min(1, base.s + 0.08),
+    Math.max(0.22, base.l - 0.3),
   );
+  const interpolator = d3.interpolateHsl(dark.toString(), light.toString());
+  return d3.quantize(interpolator, Math.max(n, 2));
+}
+
+const fmt = (n: number) =>
+  n.toLocaleString("id-ID", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+function Hl({
+  sektor,
+  children,
+}: {
+  sektor: Sektor;
+  year?: Year;
+  children: ReactNode;
+}) {
+  const c = PALETTE[sektor];
+  return (
+    <span className="hl-num" style={{ backgroundColor: c.bg, color: c.text }}>
+      {children}
+    </span>
+  );
+}
+
+/* ============================================================
+   3. GEOMETRI SUNBURST — 2 lapis (d3.hierarchy + d3.partition):
+     - Ring dalam : 3 sektor
+     - gap radial
+     - Ring luar  : 17 lapangan usaha, bersarang di sudut induknya
+   Arc generator dipisah dari tipe node asli (cukup {x0,x1}) supaya
+   bisa dipakai untuk animasi sapuan sudut (lihat SektorGroup).
+   ============================================================ */
+type RNode = d3.HierarchyRectangularNode<HierarchyData>;
+type Angles = { x0: number; x1: number };
+
+const INNER_R0 = 42;
+const INNER_R1 = 94;
+const RING_GAP = 14;
+const OUTER_R0 = INNER_R1 + RING_GAP; // 108
+const OUTER_R1 = OUTER_R0 + 56; // 164
+
+function buildPartition(year: Year): RNode {
+  const root = d3
+    .hierarchy<HierarchyData>(getHierarchicalData(year))
+    .sum((d) => d.value ?? 0);
+  return d3.partition<HierarchyData>().size([2 * Math.PI, 1])(root);
+}
+
+const arcInner = d3
+  .arc<Angles>()
+  .startAngle((d) => d.x0)
+  .endAngle((d) => d.x1)
+  .padAngle(0.012)
+  .padRadius(INNER_R1)
+  .innerRadius(INNER_R0)
+  .outerRadius(INNER_R1);
+
+const arcOuter = d3
+  .arc<Angles>()
+  .startAngle((d) => d.x0)
+  .endAngle((d) => d.x1)
+  .padAngle(0.008)
+  .padRadius(OUTER_R1)
+  .innerRadius(OUTER_R0)
+  .outerRadius(OUTER_R1);
+
+/* ============================================================
+   4. NARASI — ditulis berbasis data aktual, bergaya deskripsi
+   peneliti: klaim -> angka -> interpretasi singkat.
+   ============================================================ */
+type StepMeta = { year: Year; sektor: Sektor };
+
+const STEPS: { meta: StepMeta; title: string; content: ReactNode }[] = [
+  {
+    meta: { year: 2016, sektor: "Primer" },
+    title: "Sektor Primer, 2016",
+    content: (
+      <p>
+        Pada 2016, sektor Primer — gabungan Pertanian, Kehutanan, Perikanan
+        serta Pertambangan dan Penggalian — menyumbang{" "}
+        <Hl sektor="Primer" year={2016}>
+          17,66%
+        </Hl>{" "}
+        terhadap PDRB Jawa Tengah. Hampir seluruhnya berasal dari subsektor
+        Pertanian yang sendirian mencatat{" "}
+        <Hl sektor="Primer" year={2016}>
+          15,13%
+        </Hl>
+        , jauh melampaui Pertambangan dan Penggalian yang hanya menyumbang
+        2,53%.
+      </p>
+    ),
+  },
+  {
+    meta: { year: 2016, sektor: "Sekunder" },
+    title: "Sekunder, Kontributor Terbesar 2016",
+    content: (
+      <p>
+        Sektor Sekunder — Industri Pengolahan, Konstruksi, serta Pengadaan
+        Listrik/Air — menjadi kontributor terbesar pada 2016 dengan porsi{" "}
+        <Hl sektor="Sekunder" year={2016}>
+          45,13%
+        </Hl>
+        . Industri Pengolahan sendiri menyumbang 34,69%, atau lebih dari tiga
+        perempat total sektor ini, menegaskan posisinya sebagai tulang punggung
+        perekonomian provinsi.
+      </p>
+    ),
+  },
+  {
+    meta: { year: 2016, sektor: "Tersier" },
+    title: "Melengkapi Struktur 2016",
+    content: (
+      <p>
+        Sektor Tersier menutup struktur ekonomi 2016 dengan kontribusi{" "}
+        <Hl sektor="Tersier" year={2016}>
+          37,21%
+        </Hl>
+        , terutama ditopang Perdagangan Besar dan Eceran (13,48%) serta Jasa
+        Pendidikan (4,27%). Dengan demikian, PDRB Jawa Tengah pada 2016
+        terbentuk dari{" "}
+        <Hl sektor="Primer" year={2016}>
+          17,66%
+        </Hl>{" "}
+        Primer,{" "}
+        <Hl sektor="Sekunder" year={2016}>
+          45,13%
+        </Hl>{" "}
+        Sekunder, dan{" "}
+        <Hl sektor="Tersier" year={2016}>
+          37,21%
+        </Hl>{" "}
+        Tersier.
+      </p>
+    ),
+  },
+  {
+    meta: { year: 2025, sektor: "Primer" },
+    title: "Sektor Primer Menyusut",
+    content: (
+      <p>
+        Sembilan tahun kemudian, porsi sektor Primer menyusut menjadi{" "}
+        <Hl sektor="Primer" year={2025}>
+          15,16%
+        </Hl>{" "}
+        pada 2025 — turun 2,5 poin persentase dari 17,66% di 2016. Penyusutan
+        ini terutama didorong subsektor Pertanian yang porsinya turun dari
+        15,13% menjadi 13,07%, sejalan dengan alih fungsi lahan dan pergeseran
+        tenaga kerja ke sektor nonpertanian.
+      </p>
+    ),
+  },
+  {
+    meta: { year: 2025, sektor: "Sekunder" },
+    title: "Sekunder Tetap Menjadi Fondasi",
+    content: (
+      <p>
+        Sektor Sekunder relatif stabil di angka{" "}
+        <Hl sektor="Sekunder" year={2025}>
+          45,01%
+        </Hl>{" "}
+        pada 2025, nyaris sama dengan 45,13% pada 2016. Namun di baliknya
+        terjadi pergeseran komposisi: porsi Industri Pengolahan melandai dari
+        34,69% menjadi 33,39%, sementara Konstruksi naik dari 10,29% menjadi
+        11,47% — didorong pembangunan infrastruktur jalan tol dan properti.
+      </p>
+    ),
+  },
+  {
+    meta: { year: 2025, sektor: "Tersier" },
+    title: "Tersier Tumbuh Paling Pesat",
+    content: (
+      <>
+        <p>
+          Sektor Tersier tumbuh paling signifikan, dari 37,21% pada 2016 menjadi{" "}
+          <Hl sektor="Tersier" year={2025}>
+            39,86%
+          </Hl>{" "}
+          pada 2025. Pendorong utamanya adalah Informasi dan Komunikasi,
+          melonjak dari 3,04% menjadi 4,29%, serta Transportasi dan Pergudangan
+          yang naik dari 3,11% menjadi 4,13% — mencerminkan akselerasi
+          digitalisasi dan mobilitas logistik pascapandemi.
+        </p>
+        <p>
+          Transformasi struktural Jawa Tengah 2016–2025 menunjukkan pola yang
+          konsisten: sektor Primer mengecil, Tersier membesar, sementara
+          Sekunder tetap menjadi fondasi utama yang stabil.
+        </p>
+      </>
+    ),
+  },
+];
+
+const STEP_ORDER: StepMeta[] = STEPS.map((s) => s.meta);
+
+/* ============================================================
+   5. Panel statistik (pola "Gardena / Fremont")
+   ============================================================ */
+function SidePanel({
+  year,
+  activeMeta,
+  align,
+}: {
+  year: Year;
+  activeMeta: StepMeta | null;
+  align: "left" | "right";
+}) {
+  return (
+    <div className={`side-panel side-panel-${align}`}>
+      <div className="side-panel-year">{year}</div>
+      {SEKTOR_ORDER.map((sektor) => {
+        const orderIdx = STEP_ORDER.findIndex(
+          (m) => m.year === year && m.sektor === sektor,
+        );
+        const activeIdx = activeMeta
+          ? STEP_ORDER.findIndex(
+              (m) =>
+                m.year === activeMeta.year && m.sektor === activeMeta.sektor,
+            )
+          : -1;
+        const isActive =
+          activeMeta?.year === year && activeMeta?.sektor === sektor;
+        const isRevealed = activeIdx >= orderIdx;
+        const c = PALETTE[sektor];
+        return (
+          <div
+            key={sektor}
+            className="side-panel-row"
+            style={{ opacity: isActive ? 1 : isRevealed ? 0.7 : 0.3 }}
+          >
+            <span
+              className="side-panel-value"
+              style={{ color: isActive ? c.text : undefined }}
+            >
+              {fmt(SEKTOR_VALUE[year][sektor])}%
+              <span className="dot" style={{ backgroundColor: c.arc }} />
+            </span>
+            <span className="side-panel-label">
+              Sektor {sektor}
+              <br />
+              PDRB {year}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ============================================================
+   6. Hover payload — dipakai untuk caption di bawah donat
+   ============================================================ */
+type HoverInfo = {
+  kind: "sektor" | "lapangan";
+  key: string;
+  name: string;
+  value: number;
+};
+
+/* ============================================================
+   7. SektorGroup — satu sektor (ring dalam) + anak-anaknya (ring
+   luar), dianimasikan sebagai "sapuan sudut" DUA ARAH: begitu
+   `revealed` menjadi true, progress dianimasikan menuju 1 (tumbuh
+   dari 0 sampai penuh); begitu `revealed` menjadi false lagi
+   (scroll balik ke atas), progress dianimasikan menuju 0 (mengempis
+   balik sampai hilang) — bukan langsung di-unmount seperti
+   sebelumnya, supaya scroll bolak-balik selalu mulus dan konsisten,
+   termasuk setelah sempat pindah ke section lain lalu kembali lagi.
+   ============================================================ */
+function SektorGroup({
+  year,
+  sektor,
+  sektorNode,
+  revealed,
+  hovered,
+  onHover,
+}: {
+  year: Year;
+  sektor: Sektor;
+  sektorNode: RNode;
+  revealed: boolean;
+  hovered: HoverInfo | null;
+  onHover: (info: HoverInfo | null) => void;
+}) {
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const target = revealed ? 1 : 0;
+    const startVal = progressRef.current;
+    if (startVal === target) return;
+    cancelAnimationFrame(rafRef.current);
+    const start = performance.now();
+    const duration = 900;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const val = startVal + (target - startVal) * eased;
+      progressRef.current = val;
+      setProgress(val);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [revealed]);
+
+  const children = (sektorNode.children ?? []) as RNode[];
+  const shades = childShades(PALETTE[sektor].arc, children.length);
+  const sweepFront = sektorNode.x0 + (sektorNode.x1 - sektorNode.x0) * progress;
+  const showSektorArc = sweepFront > sektorNode.x0 + 0.0008;
+
+  const sektorD = showSektorArc
+    ? (arcInner({ x0: sektorNode.x0, x1: sweepFront }) ?? undefined)
+    : undefined;
+  const [scx, scy] = arcInner.centroid({
+    x0: sektorNode.x0,
+    x1: sektorNode.x1,
+  });
+  const showSektorLabel = progress > 0.45;
+  const sektorIsHovered = hovered?.kind === "sektor" && hovered.key === sektor;
+
+  return (
+    <g>
+      {showSektorArc && (
+        <path
+          d={sektorD}
+          fill={PALETTE[sektor].arc}
+          stroke="#1f2937"
+          strokeWidth={1}
+          className="wedge"
+          style={{
+            transform: sektorIsHovered ? "scale(1.045)" : "scale(1)",
+            transformOrigin: "0px 0px",
+          }}
+          onMouseEnter={() =>
+            onHover({
+              kind: "sektor",
+              key: sektor,
+              name: sektor,
+              value: SEKTOR_VALUE[year][sektor],
+            })
+          }
+          onMouseLeave={() => onHover(null)}
+        />
+      )}
+      <text
+        x={scx}
+        y={scy}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className="sektor-label"
+        style={{ opacity: showSektorLabel ? 1 : 0 }}
+      >
+        {sektor}
+      </text>
+
+      {children.map((child, i) => {
+        const childEnd = Math.min(child.x1, sweepFront);
+        if (childEnd <= child.x0 + 0.0008) return null;
+        const d = arcOuter({ x0: child.x0, x1: childEnd }) ?? undefined;
+        const code = child.data.code ?? child.data.name;
+        const childIsHovered =
+          hovered?.kind === "lapangan" && hovered.key === code;
+        return (
+          <path
+            key={code}
+            d={d}
+            fill={shades[i]}
+            stroke="#1f2937"
+            strokeWidth={0.6}
+            className="wedge"
+            style={{
+              transform: childIsHovered ? "scale(1.045)" : "scale(1)",
+              transformOrigin: "0px 0px",
+            }}
+            onMouseEnter={() =>
+              onHover({
+                kind: "lapangan",
+                key: code,
+                name: child.data.name,
+                value: child.value ?? 0,
+              })
+            }
+            onMouseLeave={() => onHover(null)}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+/* ============================================================
+   8. SunburstDonut — satu donat 2-lapis penuh untuk satu tahun.
+   ============================================================ */
+function SunburstDonut({
+  year,
+  activeStep,
+}: {
+  year: Year;
+  activeStep: number;
+}) {
+  const root = useMemo(() => buildPartition(year), [year]);
+  const sektorNodes = (root.children ?? []) as RNode[];
+  const [hovered, setHovered] = useState<HoverInfo | null>(null);
+
+  const isRevealed = (sektor: Sektor) => {
+    const orderIdx = STEP_ORDER.findIndex(
+      (m) => m.year === year && m.sektor === sektor,
+    );
+    return activeStep >= orderIdx;
+  };
+
+  return (
+    <div className="sunburst-donut">
+      <svg viewBox="-210 -210 420 420">
+        {sektorNodes.map((node) => {
+          const sektor = node.data.name as Sektor;
+          return (
+            <SektorGroup
+              key={sektor}
+              year={year}
+              sektor={sektor}
+              sektorNode={node}
+              revealed={isRevealed(sektor)}
+              hovered={hovered}
+              onHover={setHovered}
+            />
+          );
+        })}
+      </svg>
+      <div className="hover-caption">
+        {hovered ? (
+          <>
+            <strong>{hovered.name}</strong> · {fmt(hovered.value)}%
+          </>
+        ) : (
+          <span className="hover-caption-placeholder">
+            Arahkan kursor ke bagian diagram
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   9. Komponen utama — deteksi langkah aktif memakai
+   IntersectionObserver (pola sama seperti Indeks Williamson).
+   ============================================================ */
+export default function StrukturEkonomiSunburst() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [activeStep, setActiveStep] = useState(-1);
 
   useEffect(() => {
     const container = sectionRef.current;
     if (!container) return;
-    const steps = container.querySelectorAll("[data-step]");
-    const obs = new IntersectionObserver(handleIntersection, {
-      threshold: [0, 0.25, 0.5, 0.75, 1],
-      rootMargin: "-20% 0px -40% 0px",
-    });
-    steps.forEach((s) => obs.observe(s));
-    return () => obs.disconnect();
-  }, [handleIntersection]);
+    const cards = container.querySelectorAll("[data-step]");
 
-  // Compute D3 Partition Layout
-const root = useMemo(() => {
-  const hierarchy = d3
-    .hierarchy<HierarchyData>(activeData)
-    .sum((d) => d.value || 0);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const step = parseInt(
+            (entry.target as HTMLElement).dataset.step || "0",
+            10,
+          );
+          if (entry.isIntersecting) {
+            setActiveStep(step);
+          } else if (step === 0 && entry.boundingClientRect.top > 0) {
+            setActiveStep(-1);
+          }
+        });
+      },
+      { threshold: 0.5 },
+    );
 
-  return d3.partition<HierarchyData>().size([2 * Math.PI, 100])(hierarchy);
-}, [activeData]);
-
-  // Styling rules based on Step
-const getStyle = (node: d3.HierarchyNode<HierarchyData>) => {
-  const isRing1 = node.depth === 1;
-  const isRing2 = node.depth === 2;
-  const isPrimer =
-    node.data.name === "Primer" ||
-    (node.parent && node.parent.data.name === "Primer");
-  const isSekunder =
-    node.data.name === "Sekunder" ||
-    (node.parent && node.parent.data.name === "Sekunder");
-  const isTersier =
-    node.data.name === "Tersier" ||
-    (node.parent && node.parent.data.name === "Tersier");
-
-  // Visibility logic (Sweep & Fade-in)
-  let opacity = 1;
-  if (activeStep === 0 && isRing2) opacity = 0; // Hide ring 2 on step 0
-
-  // Highlight logic
-  let strokeWidth = 1.5;
-  let strokeColor = "#FFFFFF";
-  let isDimmed = false;
-
-  if (activeStep === 1 && node.data.code === "C") {
-    strokeWidth = 3;
-    strokeColor = "#C2410C";
-  }
-  if (activeStep === 2 && isSekunder && isRing1) {
-    strokeWidth = 3;
-    strokeColor = "#9A3412";
-  }
-  if (activeStep === 3) {
-    if (isPrimer) {
-      strokeWidth = 3;
-      strokeColor = "#3F6212";
-    } else {
-      isDimmed = true;
-    }
-  }
-  if (activeStep === 4) {
-    if (node.data.code === "J" || node.data.code === "H") {
-      strokeWidth = 3;
-      strokeColor = "#e9a3c9";
-    } else if (!isTersier) {
-      isDimmed = true;
-    }
-  }
-  if (activeStep === 5 && isSekunder) {
-    if (node.data.code === "F") {
-      strokeWidth = 3;
-      strokeColor = "#e9a3c9";
-    } // highlight konstruksi
-  } else if (activeStep === 5 && !isSekunder) {
-    isDimmed = true;
-  }
-
-  return { opacity: isDimmed ? 0.3 : opacity, strokeWidth, strokeColor };
-};
-
-  // Color generator
-  const colorScale = useMemo(() => {
-    return {
-      Primer: d3
-        .scaleLinear<string>()
-        .domain([0, 1])
-        .range(["#65A30D", "#bef264"]),
-      Sekunder: d3
-        .scaleLinear<string>()
-        .domain([0, 3])
-        .range(["#F97316", "#fdba74"]),
-      Tersier: d3
-        .scaleLinear<string>()
-        .domain([0, 10])
-        .range(["#c51b7d", "#e9a3c9"]),
-    };
+    cards.forEach((c) => observer.observe(c));
+    return () => observer.disconnect();
   }, []);
 
-  const arcGenerator = d3
-    .arc<any>()
-    .startAngle((d) => d.x0)
-    .endAngle((d) => d.x1)
-    .innerRadius((d) => d.y0 * 1.5)
-    .outerRadius(
-      (d) =>
-        d.y1 * 1.5 +
-        (activeStep === 5 &&
-        (d.data.name === "Sekunder" ||
-          (d.parent && d.parent.data.name === "Sekunder"))
-          ? 20
-          : 0),
-    )
-    .padAngle(0.01)
-    .padRadius(150);
+  const activeMeta = activeStep >= 0 ? STEP_ORDER[activeStep] : null;
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative bg-white border-t border-zinc-200"
-    >
-      {/* Title */}
-      <div className="max-w-7xl mx-auto px-6 pt-24 pb-8 text-center lg:text-left">
-        <h2 className="heading-lg text-zinc-900 font-bungee color-pink">
-          Struktur Ekonomi <p  className="font-bungee color-green">Jawa Tengah</p>
-        </h2>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row gap-12">
-        {/* LEFT: Sticky Sunburst Chart */}
-        <div className="lg:w-[60%] lg:sticky lg:top-12 lg:self-start lg:h-[80vh] flex flex-col items-center justify-center">
-          {/* Legend */}
-          <div className="flex gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#65A30D]"></div>
-              <span className="text-sm font-semibold text-zinc-600">
-                Primer
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#F97316]"></div>
-              <span className="text-sm font-semibold text-zinc-600">
-                Sekunder
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#0891B2]"></div>
-              <span className="text-sm font-semibold text-zinc-600">
-                Tersier
-              </span>
-            </div>
-          </div>
-
-          <div className="relative w-full aspect-square max-w-[500px]">
-            {/* Center Label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-5xl font-bold text-zinc-900 transition-all duration-700 font-rubik">
-                {activeYear}
-              </span>
-              <span className="text-sm text-zinc-400 font-medium font-rubik ">
-                100% PDRB
-              </span>
-            </div>
-
-            <svg
-              viewBox="-160 -160 320 320"
-              className="w-full h-full transform -rotate-90"
-            >
-              {/* Outer guide ring */}
-              <circle
-                r="150"
-                fill="none"
-                stroke="#E5E7EB"
-                strokeWidth="1"
-                strokeDasharray="4 4"
-              />
-
-              <g className="transition-transform duration-1000 ease-in-out">
-                {root
-                  .descendants()
-                  .filter((d) => d.depth > 0)
-                  .map((node, i) => {
-                    const style = getStyle(node);
-
-                    // Generate Colors
-                    let fill = "#ccc";
-                    if (node.depth === 1) fill = node.data.color ?? "#ccc";
-                    else if (node.depth === 2 && node.parent) {
-                      const parentName = node.parent.data.name;
-
-                      if (
-                        parentName === "Primer" ||
-                        parentName === "Sekunder" ||
-                        parentName === "Tersier"
-                      ) {
-                        const index = node.parent.children?.indexOf(node) ?? 0;
-                        fill = colorScale[parentName](index);
-                      }
-                    }
-
-                    return (
-                      <path
-                        key={node.data.name}
-                        d={arcGenerator(node) || undefined}
-                        fill={fill}
-                        stroke={style.strokeColor}
-                        strokeWidth={style.strokeWidth}
-                        style={{
-                          opacity: style.opacity,
-                          transition: "all 800ms cubic-bezier(0.4, 0, 0.2, 1)",
-                        }}
-                        className="cursor-pointer hover:opacity-80"
-                      >
-                        <title>
-                          {node.data.name}: {node.value?.toFixed(2)}%
-                        </title>
-                      </path>
-                    );
-                  })}
-              </g>
-            </svg>
-          </div>
+    <section ref={sectionRef} className="struktur-gauge-section">
+      {/* SISI ATAS: visual sticky — dua donat berdampingan (2016 & 2025) */}
+      <div className="visual-container">
+        <div className="stage-header">
+          <h2 className="font-bungee color-pink">
+            Struktur Ekonomi{" "}
+            <span className="font-bungee color-green">Jawa Tengah</span>
+          </h2>
+          <p className="meta-info">
+            Komposisi PDRB menurut sektor &amp; lapangan usaha · ring dalam = 3
+            sektor, ring luar = 17 lapangan usaha
+          </p>
         </div>
 
-        {/* RIGHT: Scrollable Narrative */}
-        <div className="lg:w-[40%] pb-32 pt-20 font-rubik">
-          {narrativeSteps.map((step, idx) => (
-            <div
-              key={idx}
-              data-step={idx}
-              className="narrative-step min-h-[60vh] flex items-center"
-            >
-              <div
-                className="p-8 rounded-2xl bg-[#F7F7F5] transition-all duration-500 shadow-sm border border-zinc-100"
-                style={{
-                  opacity: activeStep === idx ? 1 : 0.3,
-                  transform:
-                    activeStep === idx ? "translateY(0)" : "translateY(12px)",
-                }}
-              >
-                <h3 className="heading-md mb-4 text-zinc-900 color-green font-rubik">{step.title}</h3>
-                <p
-                  className="body-lg text-zinc-700 leading-relaxed font-rubik "
-                  dangerouslySetInnerHTML={{
-                    // Simple logic to bold or highlight specific keywords from the text based on the step
-                    __html: step.text
-                      .replace(
-                        /Industri Pengolahan adalah tulang punggung ekonomi Jawa Tengah/g,
-                        "<strong>Industri Pengolahan adalah tulang punggung ekonomi Jawa Tengah</strong>",
-                      )
-                      .replace(
-                        /Sektor Sekunder tetap menjadi kontributor terbesar/g,
-                        "<strong>Sektor Sekunder tetap menjadi kontributor terbesar</strong>",
-                      )
-                      .replace(
-                        /sektor Primer terus menyusut/g,
-                        "<strong>sektor Primer terus menyusut</strong>",
-                      )
-                      .replace(
-                        /sektor Tersier tumbuh signifikan/g,
-                        "<strong>sektor Tersier tumbuh signifikan</strong>",
-                      )
-                      .replace(
-                        /34,69%/g,
-                        "<span class='px-1 rounded bg-[#FFEDD5] text-[#C2410C] font-semibold'>34,69%</span>",
-                      )
-                      .replace(
-                        /45,01%/g,
-                        "<span class='px-1 rounded bg-[#FFEDD5] text-[#C2410C] font-semibold'>45,01%</span>",
-                      )
-                      .replace(
-                        /15,16%/g,
-                        "<span class='px-1 rounded bg-[#FCE7F3] text-[#9D174D] font-semibold'>15,16%</span>",
-                      )
-                      .replace(
-                        /39,86%/g,
-                        "<span class='px-1 rounded bg-[#DCFCE7] text-[#166534] font-semibold'>39,86%</span>",
-                      )
-                      .replace(
-                        /4,29%/g,
-                        "<span class='px-1 rounded bg-[#FFEDD5] text-[#C2410C] font-semibold'>4,29%</span>",
-                      )
-                      .replace(
-                        /11,47%/g,
-                        "<span class='px-1 rounded bg-[#DCFCE7] text-[#166534] font-semibold'>11,47%</span>",
-                      ),
-                  }}
-                />
-              </div>
+        <div className="legend-row">
+          {SEKTOR_ORDER.map((sektor) => (
+            <div key={sektor} className="legend-group">
+              <span
+                className="legend-swatch"
+                style={{ backgroundColor: PALETTE[sektor].arc }}
+              />
+              <span className="legend-label">{sektor}</span>
             </div>
           ))}
         </div>
+
+        <div className="dual-donut-row">
+          <SidePanel year={2016} activeMeta={activeMeta} align="left" />
+
+          <div className="gauge-chart">
+            <div className="donut-year-label">2016</div>
+            <SunburstDonut year={2016} activeStep={activeStep} />
+          </div>
+
+          <div className="gauge-chart">
+            <div className="donut-year-label">2025</div>
+            <SunburstDonut year={2025} activeStep={activeStep} />
+          </div>
+
+          <SidePanel year={2025} activeMeta={activeMeta} align="right" />
+        </div>
       </div>
+
+      {/* SISI BAWAH: narrative track — overlap di atas visual sticky,
+          scroll alami (bukan absolute-pinned), persis pola Williamson */}
+      <div className="narrative-track">
+        {STEPS.map((step, idx) => (
+          <div
+            key={idx}
+            data-step={idx}
+            className={`step-card${activeStep === idx ? " is-active" : ""}${
+              idx === STEPS.length - 1 ? " step-card-last" : ""
+            }`}
+          >
+            <h3>{step.title}</h3>
+            <div className="narrative-body">{step.content}</div>
+          </div>
+        ))}
+      </div>
+
+      <style jsx global>{`
+        .struktur-gauge-section {
+          position: relative;
+          background-color: #ffffff;
+        }
+
+        .struktur-gauge-section .visual-container {
+          position: sticky;
+          top: 0;
+          height: 100vh;
+          z-index: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          padding: 2rem 1.5rem;
+          background: #ffffff;
+        }
+
+        .struktur-gauge-section .stage-header {
+          text-align: center;
+          margin-bottom: 0.5rem;
+        }
+        .struktur-gauge-section .stage-header h2 {
+          font-size: clamp(1.6rem, 3vw, 2.2rem);
+        }
+        .struktur-gauge-section .meta-info {
+          font-size: 13px;
+          color: #9ca3af;
+          font-weight: 500;
+          margin-top: 4px;
+          font-family: "Jost", var(--font-sans), sans-serif;
+          max-width: 560px;
+        }
+
+        .struktur-gauge-section .legend-row {
+          display: flex;
+          gap: 1.75rem;
+          margin: 0.75rem 0 1rem;
+          font-family: "Jost", var(--font-sans), sans-serif;
+        }
+        .struktur-gauge-section .legend-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .struktur-gauge-section .legend-label {
+          font-size: 12px;
+          font-weight: 700;
+          color: #374151;
+          margin-right: 2px;
+        }
+        .struktur-gauge-section .legend-swatch {
+          width: 12px;
+          height: 12px;
+          border-radius: 3px;
+          display: inline-block;
+        }
+
+        .struktur-gauge-section .dual-donut-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2.5rem;
+          width: 100%;
+          max-width: 1280px;
+          margin: 0 auto;
+          flex-wrap: nowrap;
+        }
+
+        .struktur-gauge-section .gauge-chart {
+          width: 100%;
+          max-width: 380px;
+          flex-shrink: 0;
+          text-align: center;
+        }
+        .struktur-gauge-section .sunburst-donut svg {
+          width: 100%;
+          height: auto;
+          overflow: visible;
+        }
+        .struktur-gauge-section .donut-year-label {
+          font-family: "Jost", var(--font-sans), sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          color: #9ca3af;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+
+        .struktur-gauge-section .wedge {
+          cursor: pointer;
+          transition: transform 200ms ease;
+        }
+        .struktur-gauge-section .sektor-label {
+          font-family: "Jost", var(--font-sans), sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          fill: #1f2937;
+          pointer-events: none;
+          transition: opacity 300ms ease;
+        }
+        .struktur-gauge-section .hover-caption {
+          margin-top: 8px;
+          min-height: 18px;
+          font-family: "Jost", var(--font-sans), sans-serif;
+          font-size: 12.5px;
+          color: #374151;
+        }
+        .struktur-gauge-section .hover-caption-placeholder {
+          color: #d1d5db;
+          font-style: italic;
+        }
+
+        .struktur-gauge-section .side-panel {
+          width: 148px;
+          flex-shrink: 0;
+          font-family: "Jost", var(--font-sans), sans-serif;
+        }
+        .struktur-gauge-section .side-panel-right {
+          text-align: right;
+        }
+        .struktur-gauge-section .side-panel-year {
+          font-size: 20px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          color: #111827;
+          margin-bottom: 10px;
+        }
+        .struktur-gauge-section .side-panel-row {
+          margin-bottom: 14px;
+          transition: opacity 0.4s ease;
+        }
+        .struktur-gauge-section .side-panel-value {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 15px;
+          font-weight: 700;
+          color: #111827;
+        }
+        .struktur-gauge-section .side-panel-right .side-panel-value {
+          flex-direction: row-reverse;
+        }
+        .struktur-gauge-section .side-panel-value .dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 999px;
+          display: inline-block;
+        }
+        .struktur-gauge-section .side-panel-label {
+          display: block;
+          font-size: 11px;
+          line-height: 1.4;
+          color: #9ca3af;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+        }
+
+        /* ============================================================
+           NARRATIVE TRACK — pola sama seperti Indeks Williamson: konten
+           mengalir normal (bukan absolute), ditarik ke atas dengan
+           margin-top:-100vh supaya menimpa visual sticky, lalu discroll
+           natural sesuai tinggi layar.
+           padding-top >= 100vh: supaya saat baru masuk section ini,
+           kartu narasi BELUM terlihat sama sekali.
+           padding-bottom (bukan margin) dipakai untuk jeda setelah
+           narasi terakhir supaya tidak collapse.
+           ============================================================ */
+        .struktur-gauge-section .narrative-track {
+          position: relative;
+          z-index: 2;
+          margin-top: -100vh;
+          padding: 108vh 1.5rem 130vh;
+          pointer-events: none;
+        }
+
+        .struktur-gauge-section .step-card {
+          pointer-events: auto;
+          max-width: 480px;
+          margin: 0 auto 70vh;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 1.75rem 2rem;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+          transition: all 0.35s ease;
+          opacity: 0.25;
+          transform: translateY(15px);
+          font-family: "Jost", var(--font-sans), sans-serif;
+        }
+        .struktur-gauge-section .step-card-last {
+          margin-bottom: 0;
+        }
+        .struktur-gauge-section .step-card.is-active {
+          opacity: 1;
+          transform: translateY(0);
+          border-color: #cbd5e1;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+        }
+        .struktur-gauge-section .step-card h3 {
+          font-size: 15px;
+          font-weight: 700;
+          color: #111827;
+          margin-bottom: 0.5rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .struktur-gauge-section .narrative-body p {
+          font-size: 1.05rem;
+          line-height: 1.75;
+          color: #374151;
+          margin-bottom: 0.85rem;
+        }
+        .struktur-gauge-section .narrative-body p:last-child {
+          margin-bottom: 0;
+        }
+        .struktur-gauge-section .hl-num {
+          display: inline-block;
+          padding: 0.1em 0.4em;
+          border-radius: 4px;
+          font-weight: 700;
+        }
+
+        @media (max-width: 1000px) {
+          .struktur-gauge-section .dual-donut-row {
+            flex-direction: column;
+            gap: 2rem;
+          }
+          .struktur-gauge-section .side-panel {
+            display: none;
+          }
+          .struktur-gauge-section .gauge-chart {
+            max-width: 300px;
+          }
+          .struktur-gauge-section .legend-row {
+            flex-wrap: wrap;
+            justify-content: center;
+            row-gap: 6px;
+          }
+          .struktur-gauge-section .narrative-track {
+            padding: 108vh 1rem 100vh;
+          }
+          .struktur-gauge-section .step-card {
+            padding: 1.25rem 1.4rem;
+            margin-bottom: 55vh;
+          }
+          .struktur-gauge-section .step-card-last {
+            margin-bottom: 0;
+          }
+        }
+      `}</style>
     </section>
   );
 }

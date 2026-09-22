@@ -3,30 +3,55 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, ReferenceLine,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  ReferenceLine,
 } from "recharts";
 import { lajuPertumbuhanData, pdrbTotal, years } from "@/data/lajuPertumbuhan";
 
 const COLORS = [
-  "#d97706", "#7c3aed", "#ef4444", "#3b82f6", "#10b981",
-  "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16",
-  "#f97316", "#6366f1", "#14b8a6", "#e11d48", "#0ea5e9",
-  "#a855f7", "#22c55e",
+  "#d97706",
+  "#7c3aed",
+  "#ef4444",
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
+  "#f97316",
+  "#6366f1",
+  "#14b8a6",
+  "#e11d48",
+  "#0ea5e9",
+  "#a855f7",
+  "#22c55e",
 ];
 
 export default function LajuPertumbuhanEkonomi() {
-  const [selectedSectors, setSelectedSectors] = useState<string[]>(["PDRB Total"]);
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([
+    "PDRB Total",
+  ]);
   const [hoveredYear, setHoveredYear] = useState<number | null>(null);
 
   const allSectors = [
     { key: "PDRB Total", label: "PDRB Total" },
-    ...lajuPertumbuhanData.map((d) => ({ key: d.shortName, label: d.shortName })),
+    ...lajuPertumbuhanData.map((d) => ({
+      key: d.shortName,
+      label: d.shortName,
+    })),
   ];
 
   const toggleSector = (key: string) => {
     setSelectedSectors((prev) =>
-      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
+      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key],
     );
   };
 
@@ -83,10 +108,17 @@ export default function LajuPertumbuhanEkonomi() {
           className="chart-container"
         >
           <ResponsiveContainer width="100%" height={420}>
-            <LineChart data={chartData} margin={{ top: 10, right: 30, bottom: 0, left: 0 }}>
+            <LineChart
+              data={chartData}
+              margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#a1a1aa" }} />
-              <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#a1a1aa" }}
+                axisLine={false}
+                tickLine={false}
+              />
               <Tooltip
                 contentStyle={{
                   background: "#1a1a1a",
@@ -95,13 +127,17 @@ export default function LajuPertumbuhanEkonomi() {
                   fontSize: 12,
                   color: "#fff",
                 }}
-                formatter={(value: any, name: any) => [`${Number(value).toFixed(2)}%`, name]}
+                formatter={(value: any, name: any) => [
+                  `${Number(value).toFixed(2)}%`,
+                  name,
+                ]}
               />
               <ReferenceLine y={0} stroke="#e4e4e7" strokeWidth={2} />
 
               {selectedSectors.map((key) => {
                 const idx = allSectors.findIndex((s) => s.key === key);
-                const color = idx === 0 ? "#1a1a1a" : COLORS[(idx - 1) % COLORS.length];
+                const color =
+                  idx === 0 ? "#1a1a1a" : COLORS[(idx - 1) % COLORS.length];
                 return (
                   <Line
                     key={key}
@@ -110,7 +146,9 @@ export default function LajuPertumbuhanEkonomi() {
                     stroke={color}
                     strokeWidth={key === "PDRB Total" ? 3 : 2}
                     dot={{ fill: color, r: 3 }}
-                    strokeDasharray={key === "PDRB Total" ? undefined : undefined}
+                    strokeDasharray={
+                      key === "PDRB Total" ? undefined : undefined
+                    }
                     isAnimationActive={true}
                     animationDuration={600}
                   />
@@ -133,7 +171,8 @@ export default function LajuPertumbuhanEkonomi() {
             <div className="stat-value text-green-500">+73.01%</div>
             <div className="stat-label">Transportasi (2022)</div>
             <p className="text-xs text-zinc-500 mt-2">
-              Rebound luar biasa setelah pembukaan kembali ekonomi pasca-pandemi.
+              Rebound luar biasa setelah pembukaan kembali ekonomi
+              pasca-pandemi.
             </p>
           </div>
           <div className="stat-box">

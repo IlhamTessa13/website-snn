@@ -101,7 +101,7 @@ export const dataLapanganUsaha: SektorData[] = [
     values: { 2016: 1.52, 2020: 1.53, 2025: 1.7 },
   },
 ];
-export const getHierarchicalData = (year: number): HierarchyData =>  {
+export const getHierarchicalData = (year: number): HierarchyData => {
   return {
     name: "PDRB Jateng",
     children: [

@@ -219,9 +219,7 @@ export default function TaxRatio() {
                               ? "text-red-500"
                               : "text-zinc-400"
                         }`}
-                      >
- 
-                      </div>
+                      ></div>
                     )}
                   </motion.div>
                 </AnimatePresence>
@@ -268,16 +266,13 @@ export default function TaxRatio() {
                 className="flex-1 space-y-4 w-full"
               >
                 <div className="rounded-xl border border-pink-100 bg-pink-50/60 p-4">
-                  <div className="flex items-center justify-between mb-2">
-
-                  </div>
+                  <div className="flex items-center justify-between mb-2"></div>
                   <p className="text-sm text-zinc-600 leading-relaxed">
                     {notes.interpretasi}
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
-
                   <p className="text-sm text-zinc-600 leading-relaxed mt-2">
                     {notes.implikasi}
                   </p>
@@ -285,8 +280,6 @@ export default function TaxRatio() {
               </motion.div>
             </AnimatePresence>
           </div>
-
-
         </motion.div>
       </div>
     </section>
